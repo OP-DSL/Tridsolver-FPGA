@@ -1,2 +1,3 @@
-# BatchedTDMAsolver
-High Throughput Batched Tridiagonal solver library for Xilinx Accelerator cards
+# Implicit
+
+Private repo, Never make public until  everything is set to do so
