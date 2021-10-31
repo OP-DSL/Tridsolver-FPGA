@@ -14,4 +14,8 @@ We tested the 2D and 3D Heat diffusion application using FP32 and FP64 arithmeti
 
 
 #### Application Implementations  
-Vitis flow is used for implmenting applications targetting XIlinx Alveo U280 and U50 devices. Makefile will be added in future to support commandline based implementation.
+Vitis flow is used for implmenting applications targetting XIlinx Alveo U280 and U50 devices. Makefile will be added in future to support commandline based implementation. 
+Kernel files are named as *_kernel.cpp.
+
+each application folder contains configuration files named as *\*.cfg* and necessary placement and memory port constraints are provided there. 
+you can set constriants in vitis GUI flow as *--config \*.cfg* in the GUI command box of the binray container and kernels.
