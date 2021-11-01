@@ -10,6 +10,7 @@ We tested the 2D and 3D Heat diffusion application using FP32 and FP64 arithmeti
 * ADI3D_F64       - 2D Heat diffusion application using FP64
 * ADI2D_TH_TH_F32 - 2D Heat diffusion application on larger meshes using FP32, using Thomas-Thomas solver
 * ADI2D_THPCR_F32 - 2D Heat diffusion application on larger meshes using FP32, using Thomas-Thomas solver
+* SLV
 
 
 
@@ -21,6 +22,24 @@ each application folder contains configuration files named as *\*.cfg* and neces
 you can set constriants in vitis GUI flow as *--config \*.cfg* in the GUI command box of the binray container and kernels.
 
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
+Following Experimental Results shows the suitability of the FPGAs Implicit applications involing smaller to medium sizes meshes to get better performance and energy saving.
 ##### Xilinx Alveo U50 Vs Nvidia V100
-![](https://gyazo.com/eb5c5741b6a9a16c692170a41a49c858.png | width=100)
+* ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log_U50.pdf)
+* ![ADI2D_F64](/Results/Graph/ADI-2D-DP_log_U50.pdf)
+* ![ADI3D_F32](/Results/Graph/ADI-3D-SP_log_U50.pdf)
+* ![ADI3D_F62](/Results/Graph/ADI-3D-DP_log_U50.pdf)
+* ![ADI2D_TH_TH_F32](/Results/Graph/ADI-2D-SP_THTH_log_U50.pdf)
+* ![ADI2D_THPCR_F32](/Results/Graph/ADI-2D-SP-THPCR-U50.pdf)
+* ![SLV-40x20](/Results/Graph/SLV-40x20_U50.pdf )
+* ![SLV-100x50](/Results/Graph/SLV-100x50_U50.pdf)
+
+##### Xilinx Alveo U280 Vs Nvidia V100
+* ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log.pdf)
+* ![ADI2D_F64](/Results/Graph/ADI-2D-DP_log.pdf)
+* ![ADI3D_F32](/Results/Graph/ADI-3D-SP_log.pdf)
+* ![ADI3D_F62](/Results/Graph/ADI-3D-DP_log.pdf)
+* ![ADI2D_TH_TH_F32](/Results/Graph/ADI-2D-SP_THTH_log.pdf)
+* ![ADI2D_THPCR_F32](/Results/Graph/ADI-2D-SP-THPCR.pdf)
+* ![SLV-40x20](/Results/Graph/SLV-40x20.pdf )
+* ![SLV-100x50](/Results/Graph/SLV-100x50.pdf)
 
