@@ -1,5 +1,5 @@
 ### High-Level Batched TriDiagonal Systems solver Library for Xilinx FPGAs
-This Tridiagonal Library can be used in Multi Dimensional Implicit numerical applications where solving multiple Tridiagonal sytems is common. Thomas algorithm is used to solve interleaved tridiagonal systems inorder to get high performance on Xilinx FPGAs. We further developed Tiled Tridiagonal solver for larger systems. This library is developed targetting current generation Xilinx Accelerator cards with HBM memory to scale compute units. We have tested the library on Xilinx Alveo U280 and Xilinx Alveo U50 devices.  
+This Tridiagonal Library can be used to get high performance on FPGA when there is a need to solve multiple TriDiagonal systems. Libray utilise the inexpensive Thomas solver with batching to eliminate the carried loop dependency in thomas solver. One limitation of the batched thomas solver implementation on FPGAs is system size due to limited on chip memory. Thomas_PCR and Thomas_thomas solver Library can be used to solve batch of larger systems. Currrently this library supports only current generation Xilinx Accelaration cards. This libray have been teste on Xilinx Alveo U280 and Xilinx Alveo U50 devices with multiple CUs. Results shows that libray scales well without causing any significant drop in the operating frequency.  
 
 #### Representative applications
 We tested the 2D and 3D Heat diffusion application using FP32 and FP64 arithmetics. All of our application implementation supports the Batched computation of the meshes. Another varient of applications for 2D Heat diffusion application on larger meshes also developed using Tiled thomas solvers. Following application can be found in /FPGA directory  
@@ -43,4 +43,5 @@ Following Experimental Results shows the suitability of the FPGAs for Implicit a
 * ![ADI2D_THPCR_F32](/Results/Graph/ADI-2D-SP-THPCR.pdf)
 * ![SLV-40x20](/Results/Graph/SLV-40x20.pdf )
 * ![SLV-100x50](/Results/Graph/SLV-100x50.pdf)
+
 
