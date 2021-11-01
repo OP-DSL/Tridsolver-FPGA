@@ -19,3 +19,8 @@ Kernel files are named as *_kernel.cpp.
 
 each application folder contains configuration files named as *\*.cfg* and necessary placement and memory port constraints are provided there. 
 you can set constriants in vitis GUI flow as *--config \*.cfg* in the GUI command box of the binray container and kernels.
+
+#### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
+##### Xilinx Alveo U50 Vs Nvidia V100
+![](https://gyazo.com/eb5c5741b6a9a16c692170a41a49c858.png | width=100)
+
