@@ -22,7 +22,8 @@ each application folder contains configuration files named as *\*.cfg* and neces
 you can set constriants in vitis GUI flow as *--config \*.cfg* in the GUI command box of the binray container and kernels.
 
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
-Following Experimental Results shows the suitability of the FPGAs Implicit applications involing smaller to medium sizes meshes to get better performance and energy saving.
+Following Experimental Results shows the suitability of the FPGAs for Implicit applications involing smaller to medium sizes meshes to get better performance and energy saving. Higher accuracy of the model prediction shows that arithmetic units are always utilied as intended. 
+
 ##### Xilinx Alveo U50 Vs Nvidia V100
 * ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log_U50.pdf)
 * ![ADI2D_F64](/Results/Graph/ADI-2D-DP_log_U50.pdf)
