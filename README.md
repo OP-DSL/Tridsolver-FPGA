@@ -25,14 +25,62 @@ you can set constriants in vitis GUI flow as *--config \*.cfg* in the GUI comman
 Following Experimental Results shows the suitability of the FPGAs for Implicit applications involing smaller to medium sizes meshes to get better performance and energy saving. Higher accuracy of the model prediction shows that arithmetic units are always utilied as intended. 
 
 ##### Xilinx Alveo U50 Vs Nvidia V100
-* ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log_U50.pdf)
+
+<table>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP_log_U50.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-DP_log_U50.svg" width=500 </td>
+  </tr>
+   <tr>
+    <td>2D ADI, FP32 </td>
+    <td>2D ADI, FP64  </td>
+  </tr>
+ </table>
+ 
+ <table>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-3D-SP_log_U50.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-3D-DP_log_U50.svg" width=500 </td>
+  </tr>
+   <tr>
+    <td>2D ADI, FP32 </td>
+    <td>2D ADI, FP64  </td>
+  </tr>
+ </table>
+ 
+ 
+ <table>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP_THTH_log_U50.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP-THPCR-U50.svg" width=500 </td>
+  </tr>
+   <tr>
+    <td>2D ADI, FP32 </td>
+    <td>2D ADI, FP64  </td>
+  </tr>
+ </table>
+ 
+ 
+  <table>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/SLV-40x20_U50.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/SLV-100x50_U50.svg" width=500 </td>
+  </tr>
+   <tr>
+    <td>2D ADI, FP32 </td>
+    <td>2D ADI, FP64  </td>
+  </tr>
+ </table>
+
+
+<!-- * ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log_U50.pdf)
 * ![ADI2D_F64](/Results/Graph/ADI-2D-DP_log_U50.pdf)
 * ![ADI3D_F32](/Results/Graph/ADI-3D-SP_log_U50.pdf)
 * ![ADI3D_F62](/Results/Graph/ADI-3D-DP_log_U50.pdf)
 * ![ADI2D_TH_TH_F32](/Results/Graph/ADI-2D-SP_THTH_log_U50.pdf)
 * ![ADI2D_THPCR_F32](/Results/Graph/ADI-2D-SP-THPCR-U50.pdf)
 * ![SLV-40x20](/Results/Graph/SLV-40x20_U50.pdf )
-* ![SLV-100x50](/Results/Graph/SLV-100x50_U50.pdf)
+* ![SLV-100x50](/Results/Graph/SLV-100x50_U50.pdf) -->
 
 ##### Xilinx Alveo U280 Vs Nvidia V100
 * ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log.pdf)
