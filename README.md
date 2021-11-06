@@ -24,51 +24,55 @@ you can set constriants in vitis GUI flow as *--config \*.cfg* in the GUI comman
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
 Following Experimental Results shows the suitability of the FPGAs for Implicit applications involing smaller to medium sizes meshes to get better performance and energy saving. Higher accuracy of the model prediction shows that arithmetic units are always utilied as intended. 
 
-##### Xilinx Alveo U50 Vs Nvidia V100
+### Xilinx Alveo U50 Vs Nvidia V100
 
 <table>
+  <caption>2D ADI Heat Diffusion Application Performance, 120 iter</caption>
   <tr>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP_log_U50.svg" width=500 </td>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-DP_log_U50.svg" width=500 </td>
   </tr>
    <tr>
-    <td>2D ADI, FP32 </td>
-    <td>2D ADI, FP64  </td>
+     <td>FP32, v= 8,  f<sub>CU</sub>=3,   N<sub>CU</sub>=2 </td>
+     <td>FP64, v= 8,  f<sub>CU</sub>=3,   N<sub>CU</sub>=2 </td>
   </tr>
  </table>
  
  <table>
+  <caption>3D ADI Heat Diffusion Application Performance, 100 iter</caption>
   <tr>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-3D-SP_log_U50.svg" width=500 </td>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-3D-DP_log_U50.svg" width=500 </td>
   </tr>
    <tr>
-    <td>2D ADI, FP32 </td>
-    <td>2D ADI, FP64  </td>
+    <td>FP32, v= 8, N<sub>CU</sub>=4 </td>
+    <td>FP64, v= 8, N<sub>CU</sub>=2 </td>
   </tr>
  </table>
  
  
  <table>
+  <caption>2D ADI Heat Diffusion Application on Larger Meshes, 100 iter</caption>
   <tr>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP_THTH_log_U50.svg" width=500 </td>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP-THPCR-U50.svg" width=500 </td>
   </tr>
    <tr>
-    <td>2D ADI, FP32 </td>
-    <td>2D ADI, FP64  </td>
+    <td>FP32, Thomas-Thomas solver </td>
+    <td>FP32, Thomas-PCR solver  </td>
   </tr>
  </table>
  
  
   <table>
+  <caption>SLV Application performance</caption>
   <tr>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/SLV-40x20_U50.svg" width=500 </td>
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/SLV-100x50_U50.svg" width=500 </td>
   </tr>
    <tr>
-    <td>2D ADI, FP32 </td>
-    <td>2D ADI, FP64  </td>
+    <td>40x20 Mesh, v = 1, N<sub>CU</sub>=2, FP64 </td>
+    <td>100x50 Mesh, v = 1, N<sub>CU</sub>=2, FP64 </td>
   </tr>
  </table>
 
