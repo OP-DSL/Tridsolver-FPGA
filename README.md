@@ -58,8 +58,8 @@ Following Experimental Results shows the suitability of the FPGAs for Implicit a
     <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP-THPCR-U50.svg" width=500 </td>
   </tr>
    <tr>
-    <td>FP32, Thomas-Thomas solver </td>
-    <td>FP32, Thomas-PCR solver  </td>
+    <td>FP32, Thomas-Thomas solver, N<sub>CU</sub>=4 </td>
+    <td>FP32, Thomas-PCR solver, N<sub>CU</sub>=4  </td>
   </tr>
  </table>
  
@@ -86,14 +86,68 @@ Following Experimental Results shows the suitability of the FPGAs for Implicit a
 * ![SLV-40x20](/Results/Graph/SLV-40x20_U50.pdf )
 * ![SLV-100x50](/Results/Graph/SLV-100x50_U50.pdf) -->
 
-##### Xilinx Alveo U280 Vs Nvidia V100
-* ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log.pdf)
+
+
+
+## Xilinx Alveo U280 Vs Nvidia V100
+<table>
+  <caption>2D ADI Heat Diffusion Application Performance, 120 iter</caption>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP_log.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-DP_log.svg" width=500 </td>
+  </tr>
+   <tr>
+     <td>FP32, v= 8,  f<sub>CU</sub>=3,   N<sub>CU</sub>=3 </td>
+     <td>FP64, v= 8,  f<sub>CU</sub>=3,   N<sub>CU</sub>=3 </td>
+  </tr>
+ </table>
+ 
+ <table>
+  <caption>3D ADI Heat Diffusion Application Performance, 100 iter</caption>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-3D-SP_log.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-3D-DP_log.svg" width=500 </td>
+  </tr>
+   <tr>
+    <td>FP32, v= 8, N<sub>CU</sub>=6 </td>
+    <td>FP64, v= 8, N<sub>CU</sub>=3 </td>
+  </tr>
+ </table>
+ 
+ 
+ <table>
+  <caption>2D ADI Heat Diffusion Application on Larger Meshes, 100 iter</caption>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP_THTH_log.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/ADI-2D-SP_THPCR_log.svg" width=500 </td>
+  </tr>
+   <tr>
+    <td>FP32, Thomas-Thomas solver,  N<sub>CU</sub>=4 </td>
+    <td>FP32, Thomas-PCR solver,  N<sub>CU</sub>=4  </td>
+  </tr>
+ </table>
+ 
+ 
+  <table>
+  <caption>SLV Application performance</caption>
+  <tr>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/SLV-40x20.svg" width=500 </td>
+    <td><img src="https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Results/Graph/SLV-100x50.svg" width=500 </td>
+  </tr>
+   <tr>
+    <td>40x20 Mesh, v = 1, N<sub>CU</sub>=3, FP64 </td>
+    <td>100x50 Mesh, v = 1, N<sub>CU</sub>=3, FP64 </td>
+  </tr>
+ </table>
+
+
+<!-- * ![ADI2D_F32](/Results/Graph/ADI-2D-SP_log.pdf)
 * ![ADI2D_F64](/Results/Graph/ADI-2D-DP_log.pdf)
 * ![ADI3D_F32](/Results/Graph/ADI-3D-SP_log.pdf)
 * ![ADI3D_F62](/Results/Graph/ADI-3D-DP_log.pdf)
 * ![ADI2D_TH_TH_F32](/Results/Graph/ADI-2D-SP_THTH_log.pdf)
 * ![ADI2D_THPCR_F32](/Results/Graph/ADI-2D-SP-THPCR.pdf)
 * ![SLV-40x20](/Results/Graph/SLV-40x20.pdf )
-* ![SLV-100x50](/Results/Graph/SLV-100x50.pdf)
+* ![SLV-100x50](/Results/Graph/SLV-100x50.pdf) -->
 
 
