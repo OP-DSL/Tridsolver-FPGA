@@ -1,8 +1,8 @@
-### High-Level Batched TriDiagonal Systems solver Library for Xilinx FPGAs
-This Tridiagonal Library can be used to get high performance on FPGA when there is a need to solve multiple TriDiagonal systems. Libray utilise the inexpensive Thomas solver with batching to eliminate the carried loop dependency in thomas solver. One limitation of the batched thomas solver implementation on FPGAs is system size due to limited on chip memory. Thomas_PCR and Thomas_thomas solver Library can be used to solve batch of larger systems. Currrently this library supports only current generation Xilinx Accelaration cards. This libray have been teste on Xilinx Alveo U280 and Xilinx Alveo U50 devices with multiple CUs. Results shows that libray scales well without causing any significant drop in the operating frequency.  
+### Batched Tridiagonal Systems Solver Library for Xilinx FPGAs
+The Tridsolver-FPGA Library provides high-throughput implementations of multiple multi-dimensional tridiagonal system solvers on FPGAs. The libray is based on the inexpensive Thomas algorithm with batching of systems for smaller and medium sized systems and a hybrid Thomas_PCR and Thomas_thomas solution to solve larger systems. This version of the library only supports current generation Xilinx FPGA devices and have been tested on Xilinx Alveo U280 and Alveo U50 cards. The library and performance results are currenty under review for publication. 
 
 #### Representative applications
-We tested the 2D and 3D Heat diffusion application using FP32 and FP64 arithmetics. All of our application implementation supports the Batched computation of the meshes. Legacy thomas solver is used to implement ADI application for smaller meshes. Thomas-Thomas and Thomas-PCR based Tiled Thomas solvers are used in ADI applications for larger meshes. Following application can be found in /FPGA directory. List of Varients we tested as follows.   
+The library has been used to implement the 2D and 3D Heat diffusion application using FP32 and FP64 arithmetic. The implementation supports the batched computation of systems. The `/FPGA` directory consists the following varients of these applications. 
 
 
 <table>
@@ -31,20 +31,16 @@ We tested the 2D and 3D Heat diffusion application using FP32 and FP64 arithmeti
     <td> ADI2D_THPCR_F32 </td>
     <td>2D ADI application with Tiled Thomas-PCR solver using FP32 </td>
   </tr>
-  <tr>
-    <td> SLV </td>
-    <td> SLV application using Hundsdorfer-Verwer(HV) in FP64   </td>
-  </tr>
  </table>
 
 
-
 #### Application Implementations  
-Vitis flow is used for implmenting applications targetting XIlinx Alveo U280 and U50 devices. Makefile will be added in future to support commandline based implementation. 
-Kernel files are named as *_kernel.cpp.
+Vitis data-flow programming is used for implmenting applications targetting Xilinx Alveo U280 and U50 devices. A Makefile will be added in the future to support commandline based implementation.  
 
-each application folder contains configuration files named as *\*.cfg* and necessary placement and memory port constraints are provided there. 
-you can set constriants in vitis GUI flow as *--config \*.cfg* in the GUI command box of the binray container and kernels.
+Kernel files are named as `*_kernel.cpp`.
+
+Each application folder contains configuration files named as `*\*.cfg*` and necessary placement and memory port constraints are provided there. 
+You can set constriants in vitis GUI flow as `*--config \*.cfg*` in the GUI command box of the binray container and kernels.
 
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
 Following Experimental Results shows the suitability of the FPGAs for Implicit applications involing smaller to medium sizes meshes to get better performance and energy saving. Higher accuracy of the model prediction shows that arithmetic units are always utilied as intended. 
