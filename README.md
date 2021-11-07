@@ -4,7 +4,6 @@ The Tridsolver-FPGA Library provides high-throughput implementations of multiple
 #### Representative applications
 The library has been used to implement the 2D and 3D Heat diffusion application using FP32 and FP64 arithmetic. The implementation supports the batched computation of systems. The `/FPGA` directory consists the following varients of these applications. 
 
-
 <table>
 <!--   <caption>2D ADI Heat Diffusion Application Performance, 120 iter</caption> -->
   <tr>
@@ -43,7 +42,7 @@ Each application folder contains configuration files named as `*\*.cfg*` and nec
 You can set constriants in vitis GUI flow as `*--config \*.cfg*` in the GUI command box of the binray container and kernels.
 
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
-Following Experimental Results shows the suitability of the FPGAs for Implicit applications involing smaller to medium sizes meshes to get better performance and energy saving. Higher accuracy of the model prediction shows that arithmetic units are always utilied as intended. 
+The performance of Tridsolver-FPGA library on Xilinx FPGAs has been compared to performance of the same applications on Nvida V100 GPUs (using the [Tridsolver GPU library by László et al.](https://github.com/OP-DSL/tridsolver) and NVIDIA's cuSPARSE). The following results are for the 2D and 3D Heat Diffusion Application implemented with the ADI technique and a Stochastic Local Volatility (SLV) model application, implemented with a Hundsdorfer-Verwer (HV) method for time integration. 
 
 ### Xilinx Alveo U50 Vs Nvidia V100
 
