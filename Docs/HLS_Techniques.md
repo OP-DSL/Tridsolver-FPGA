@@ -109,3 +109,5 @@ above code will implement functionally correct delay buffer but it will be very 
 ```C
 #pragma HLS dependence variable=ext_mem RAW distance=200 true
 ```
+We note that this construct worked in Vitis 2019.2 and didn't work in Vitis 2020.x as well as 2021.x
+
