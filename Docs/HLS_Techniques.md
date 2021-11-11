@@ -34,20 +34,8 @@ above loop transformation of solving systems in interleaved manner increases the
 ### Overcoming Limited number of Memory Ports
 Both of above nested loops will hit limited mmeory port issue. This is becuase, there are two load operation on memory b and one write operation but BRAM natively support two ports where only two memory operations can be done in parallel. Due to this limitation itroducing a temporary storage to store dependency distance number of elements will allow us to achive II=1 without replicating the memory. This is as follows
 ```C
-for(int j =0; j < Batch_size/g; j++){
-  for(int i = 1; i < N; i++){
-    for(int k = 0; k < g; k++){
-      #pragma HLS dependence variable=b_last RAW distance=DIST true
-      #pragma HLS dependence variable=d_last RAW distance=DIST true
-      int ind = (j*g+k)*N+i; 
-      float w = a[ind] / b_last[g];
-      b[ind] = b[ind] - w * c[ind-g];
-      d[ind] = d[ind] - w * d_last[g];
-      b_last[g] = b[ind];
-      d_last[g] = d[ind];
-    }
-   }
-}
+#pragma HLS dependence variable=b_last RAW distance=DIST true
+#pragma HLS dependence variable=d_last RAW distance=DIST true
 ```
 Here we guide compiler about the dependency distance(DIST=g) using `#pragma HLS dependence` directive. if g is a constant, compiler will automatically find the dependency distance. 
 
@@ -85,13 +73,23 @@ for(int j =0; j < Batch_size/g*N*g; j++){
 }
 ```
 
+### Support for Streaming Interface 
+Streaming interface gives the flexibility that any amount of data can be continuously transferrred, independent execution of the module, and doesn't require any complex controls. The above `C` code get's input from on chip memory and output interface also a memory. Inorder to support stream interface, we have to put `g` number of system in the on chip memory, requiring a separate loop we call as `thomas_interleave`.
+
 ### Timing Improvement 
 One of the challenge when scaling to multile thomas solvers is achiving a good operating frequency.  Data type size of the loop control variables plays a important role in derterming the critical path latency. In our designs we use arbitary bit length integer data types from `ap_uint.h` to improve the critical path timing. 
+
+### Vectorisation 
+Vectorization of multiple solvers under same control logic improves device resource consumption although very large vector factors lead to longer critical paths. 
+We use 256 bit data path(`ap_uint<256>`) which can support 8 floating point solvers or 4 double precession solvers. `union` data strcture was used to reinterpret N bit data path as double/float or vice versa. Alternatively C `struct` data type can be used to implement vectorised data path but we noticed Vitis 2019.2 compiler allocate separate BRAM for each struct element array.   
 
 ## Multi Dimensional ADI optimisations
 
 ### Caching to improve the strided memory access 
 In a 3D mesh, acccesing along y lines and z lines are challenging as consecutive access locations are non continuous. In order to get better memory perfromance we use on chip memory as cache to support burst memory transfers. if we want to read y lines, we read entire XY plane first and then we extract y lines from on chip memory. Here also ping pong buffer technique is used to support parallel external memory access and y line extraction.
+
+### Fusing Coefficient Generation and Thomas solver 
+
 
 ### HBM Delay Buffer 
 Implementing a big FIFO will require huge on chip memory, that size sometimes not be availble in the target device. In that cases, We can use external memory as a Big FIFO/ Delay buffer. Challenge here is, we have to synchronize the read and write pointers to implement where there is read after write dependency.  
