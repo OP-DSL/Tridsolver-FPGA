@@ -1,5 +1,5 @@
 ### Batched Tridiagonal Systems Solver Library for Xilinx FPGAs
-The Tridsolver-FPGA Library provides high-throughput implementations of multiple multi-dimensional tridiagonal system solvers on FPGAs. The libray is based on the inexpensive Thomas algorithm with batching of multiple systems for solving smaller and medium sized systems and hybrid Thomas_PCR and Thomas_Thomas algorithms to solve larger systems. The library currentry only supports Xilinx FPGA devices and have been tested on Xilinx Alveo U280 and Alveo U50 cards. Ongoing and future work will add support for Intel FPGAs. The library and performance results are currenty under review for publication. 
+The Tridsolver-FPGA Library provides high-throughput implementations of multiple multi-dimensional tridiagonal system solvers on FPGAs. The libray is based on the inexpensive Thomas algorithm with batching of multiple systems for solving smaller and medium sized systems and hybrid Thomas_PCR and Thomas_Thomas algorithms to solve larger systems. The HLS Techniques used to implement the Libray and data path for 3D ADI applications can be found [here](https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Docs/HLS_Techniques.md). The library currentry only supports Xilinx FPGA devices and have been tested on Xilinx Alveo U280 and Alveo U50 cards. Ongoing and future work will add support for Intel FPGAs. The library and performance results are currenty under review for publication. 
 
 #### Representative applications
 The library has been used to implement the 2D and 3D Heat diffusion application using FP32 and FP64 arithmetic. The implementation supports the batched computation of systems. The `/FPGA` directory consists the following varients of these applications. 
@@ -38,8 +38,8 @@ Vitis data-flow programming is used for implmenting applications targetting Xili
 
 Kernel files are named as `*_kernel.cpp`.
 
-Each application folder contains configuration files named as `*\*.cfg*` and necessary placement and memory port constraints are provided there. 
-You can set constriants in vitis GUI flow as `*--config \*.cfg*` in the GUI command box of the binray container and kernels.
+Each application folder contains configuration files named as `\*.cfg` and necessary placement and memory port constraints are provided there. 
+You can set constriants in vitis GUI flow as `--config \*.cfg` in the GUI command box of the binray container and kernels.
 
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
 The performance of Tridsolver-FPGA library on Xilinx FPGAs has been compared to performance of the same applications on Nvida V100 GPUs (using the [Tridsolver GPU library by László et al.](https://github.com/OP-DSL/tridsolver) and NVIDIA's cuSPARSE). The following results are for the 2D and 3D Heat Diffusion Application implemented with the ADI technique and a Stochastic Local Volatility (SLV) model application, implemented with a Hundsdorfer-Verwer (HV) method for time integration. 
