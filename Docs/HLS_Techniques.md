@@ -35,6 +35,8 @@ Both of above nested loops will hit limited mmeory port issue. This is becuase, 
 for(int j =0; j < Batch_size/g; j++){
   for(int i = 1; i < N; i++){
     for(int k = 0; k < g; k++){
+      #pragma HLS dependence variable=b_last RAW distance=DIST true
+      #pragma HLS dependence variable=d_last RAW distance=DIST true
       int ind = (j*g+k)*N+i; 
       float w = a[ind] / b_last[g];
       b[ind] = b[ind] - w * c[ind-g];
@@ -45,9 +47,40 @@ for(int j =0; j < Batch_size/g; j++){
    }
 }
 ```
-
+Here we guide compiler about the dependency distance(DIST=g) using #pragma HLS dependence directive. if g is a constant, compiler will automatically find the dependency distance. 
 
 ### Ping Pong buffers inference using Nested loop Vs Flatened Loop 
-Since forward loop memory access and backward loop memory accesss are in opposite direction in Thomas solver, we need to transfer data between two loops using memory. When we target higher perfromance, each loops should execute in parallel. Basically they are mapped to two hardware modules which operates in parallel. Inorder to infer that, memories used in those loops hsould have one operations, first loop writes the data and second loop reads the data. This increases the required number of memories. 
+Since forward loop memory access and backward loop memory accesss are in opposite direction in Thomas solver, we need to transfer data between two loops using memory. When we target higher perfromance, each loops should execute in parallel. Basically they are mapped to two hardware modules which operates in parallel. Inorder to infer that, memories used in those loops should have one operations, first loop writes the data and second loop reads the data. This is called as ping pong buffers or double buffers, requires twice memory as executing one loop after another. We can use the Xilinx data flow directive to execute both loops in parallel. 
+
+```C
+for(int j =0; j < Batch_size/g; j++){
+  #pragma HLS dataflow
+  for(int i = 1; i < N; i++){
+    for(int k = 0; k < g; k++){
+      // forward loop
+    }
+   }
+   
+  for(int i = 1; i < N; i++){
+    for(int k = 0; k < g; k++){
+      // backward loop
+    }
+  }
+}
+```  
+
+For the above implmentation compiler will automatically implement the ping pong buffers. But one disadvantage of nested loops in ping pong buffer synchronization will include arithmetic pipeline latency as well. Total number of clock cycles to swap the location will be clocks to read/write all the values plus arithmetic pipeline latency. This overhead become significant when Batch size is huge. We eliminate this overhead by manually implementing the ping pong buffers by partitioning the memory and implmenting this in a flattened loop as follows. 
+
+
+```C
+#pragma HLS dataflow
+for(int j =0; j < Batch_size/g*N*g; j++){
+  // forward loop
+}
+// both loops are communicating through FIFO stream
+for(int j =0; j < Batch_size/g*N*g; j++){
+  // backward loop
+}
+```
 
 ### HBM FIFO 
