@@ -1,4 +1,6 @@
-Range of HLS optimisation we have applied inorder to get expected performance for Batched thomas solver Library as well as applications we have implemented. All the library and application are developed using Vivado C++ and we guides the compiler using HLS Pragmas. Following are the main optimisations in this work which could be useful for other works. 
+Range of HLS optimisation we have applied inorder to get performance gain for Batched thomas solver Library as well as applications we have implemented. All the library and application are developed using Vivado C++ and we guides the compiler using HLS Pragmas. Following are the main optimisations which could be useful for other works. 
+
+## Thomas Solver Optimisations
 
 ### Thomas solver II=1 
 One of the main disadvantage of the Thomas algorithm is it's sequential execution due to loop carried dependency. Following nested loop do thomas forward solve for Batch_size number of Systems. This is a simple representation of batched forward solve where all arrays are onchip memories without considering the onchip memory limitation for larger batch size.  
@@ -69,7 +71,7 @@ for(int j =0; j < Batch_size/g; j++){
 }
 ```  
 
-For the above implmentation compiler will automatically implement the ping pong buffers. But one disadvantage of nested loops in ping pong buffer synchronization will include arithmetic pipeline latency as well. Total number of clock cycles to swap the location will be clocks to read/write all the values plus arithmetic pipeline latency. This overhead become significant when Batch size is huge. We eliminate this overhead by manually implementing the ping pong buffers by partitioning the memory and implmenting this in a flattened loop as follows. 
+For the above implmentation compiler will automatically infer the ping pong buffers for data movement. But, the disadvantage of nested loops in ping pong buffer synchronization will include arithmetic pipeline latency as well. Total number of clock cycles to swap the location will be clock cycles to read/write all the values plus arithmetic pipeline latency. This overhead become significant when Batch size is huge. We eliminate this overhead by manually implementing the ping pong buffers by partitioning the memory and implmenting this in a flattened loop as follows. 
 
 
 ```C
@@ -83,4 +85,27 @@ for(int j =0; j < Batch_size/g*N*g; j++){
 }
 ```
 
-### HBM FIFO 
+
+## Multi Dimensional ADI optimisations
+
+### Caching to improve the strided memory access 
+In a 3D mesh, acccesing along y lines and z lines are challenging as consecutive access locations are non continuous. In order to get better memory perfromance we use on chip memory as cache to support burst memory transfers. if we want to read y lines, we read entire XY plane first and then we extract y lines from on chip memory. Here also ping pong buffer technique is used to support parallel external memory access and y line extraction.
+
+### HBM Delay Buffer 
+Implementing a big FIFO will require huge on chip memory, that size sometimes not be availble in the target device. In that cases, We can use external memory as a Big FIFO/ Delay buffer. Challenge here is, we have to synchronize the read and write pointers to implement where there is read after write dependency.  
+
+```C
+for(int i =0; i < Transfer_size + Delay_size; i++){
+  if(i < Transfer_size){
+      ext_mem[i] = in_f.pop();
+  }
+  if(i >= Delay_size){
+      out_f.push(ext_mem[i-Delay_size]);
+  }
+}
+```
+above code will implement functionally correct delay buffer but it will be very slow. This is because compiler will try to enforce the inter iteration dependency due to multi clock cycles latency in read and write of external memory. This latency is usually 100-200 clock cycles, which leaves the II of loop in higher value. We can get ideal II=1 if we know the Delay_size is greater than ~200 clcoks by providing dependency distance using a pragma directive as follows.  
+
+```C
+#pragma HLS dependence variable=ext_mem RAW distance=200 true
+```
