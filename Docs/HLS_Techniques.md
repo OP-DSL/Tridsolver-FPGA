@@ -15,7 +15,7 @@ for(int j =0; j < Batch_size; j++){
    }
 }
 ```
-As inner loop have loop carried dependency, this limites Initiation Interval(II or g) of the inner loop close to 30 for FP32 arithmetic and close to 60 for FP64 arithmetic.  This will lead to higher latency like Batch_size*N*30 for FP32 and Batch_size*N*60 for FP64. Inorder to improve the performance, we need to tatget ideal II=1 for inner loop. Here we note that dependecy distance is 1. 
+As inner loop have loop carried dependency, this limites Initiation Interval(II or g) of the inner loop close to 30 for FP32 arithmetic and close to 60 for FP64 arithmetic.  This will lead to higher latency like `Batch_size*N*30` for FP32 and `Batch_size*N*60` for FP64. Inorder to improve the performance, we need to tatget ideal II=1 for inner loop. Here we note that dependecy distance is 1. 
 
 ```C
 for(int j =0; j < Batch_size/g; j++){
@@ -29,7 +29,7 @@ for(int j =0; j < Batch_size/g; j++){
    }
 }
 ```
-above loop transformation of solving systems in interleaved manner increases the dendency distance of the most inner loop to g. This makes consecutive iterations to be executed each clock cycles and reaching Ideal II=1.
+above loop transformation of solving systems in interleaved manner increases the dendency distance of the most inner loop to `g`. This makes consecutive iterations to be executed each clock cycles and reaching Ideal II=1.
 
 ### Overcoming Limited number of Memory Ports
 Both of above nested loops will hit limited mmeory port issue. This is becuase, there are two load operation on memory b and one write operation but BRAM natively support two ports where only two memory operations can be done in parallel. Due to this limitation itroducing a temporary storage to store dependency distance number of elements will allow us to achive II=1 without replicating the memory. This is as follows
@@ -49,10 +49,10 @@ for(int j =0; j < Batch_size/g; j++){
    }
 }
 ```
-Here we guide compiler about the dependency distance(DIST=g) using #pragma HLS dependence directive. if g is a constant, compiler will automatically find the dependency distance. 
+Here we guide compiler about the dependency distance(DIST=g) using `#pragma HLS dependence` directive. if g is a constant, compiler will automatically find the dependency distance. 
 
 ### Ping Pong buffers inference using Nested loop Vs Flatened Loop 
-Since forward loop memory access and backward loop memory accesss are in opposite direction in Thomas solver, we need to transfer data between two loops using memory. When we target higher perfromance, each loops should execute in parallel. Basically they are mapped to two hardware modules which operates in parallel. Inorder to infer that, memories used in those loops should have one operations, first loop writes the data and second loop reads the data. This is called as ping pong buffers or double buffers, requires twice memory as executing one loop after another. We can use the Xilinx data flow directive to execute both loops in parallel. 
+Since forward loop memory access and backward loop memory accesss are in opposite direction in Thomas solver, we need to transfer data between two loops using memory. When we target higher perfromance, each loops should execute in parallel. Basically they are mapped to two hardware modules which operates in parallel. Inorder to infer that, memories used in those loops should have one operations, first loop writes the data and second loop reads the data. This is called as ping pong buffers or double buffers, requires twice memory as executing one loop after another. We can use the Xilinx `dataflow` directive to execute both loops in parallel. 
 
 ```C
 for(int j =0; j < Batch_size/g; j++){
@@ -85,6 +85,8 @@ for(int j =0; j < Batch_size/g*N*g; j++){
 }
 ```
 
+### Timing Improvement 
+One of the challenge when scaling to multile thomas solvers is achiving a good operating frequency.  Data type size of the loop control variables plays a important role in derterming the critical path latency. In our designs we use arbitary bit length integer data types from `ap_uint.h` to improve the critical path timing. 
 
 ## Multi Dimensional ADI optimisations
 
