@@ -5,53 +5,53 @@
 #ifndef __STENCILS_H__
 #define __STENCILS_H__
 
-template <bool FPPREC, class DType>
+template <bool FPPREC, class DType, int DMAX>
 static void stencil_2d( hls::stream<uint256_dt> &rd_buffer, hls::stream<uint256_dt> &wr_buffer,
-		hls::stream<uint256_dt> &acc_in,  hls::stream<uint256_dt> &acc_out, struct data_G data_g, bool dnt_acc_updt){
+        hls::stream<uint256_dt> &acc_in,  hls::stream<uint256_dt> &acc_out, struct data_G data_g, bool dnt_acc_updt){
 
-	#define SHIFT (3-FPPREC)
-	#define VFACTOR ((1 << SHIFT))
-	#define DSIZE 	(256/VFACTOR)
+    #define SHIFT (3-FPPREC)
+    #define VFACTOR ((1 << SHIFT))
+    #define DSIZE   (256/VFACTOR)
 
-	short end_index = data_g.end_index;
+    short end_index = data_g.end_index;
 
     // Registers to hold data specified by stencil
-	DType row_arr3[VFACTOR];
-	DType row_arr2[VFACTOR + 2];
-	DType row_arr1[VFACTOR];
-	DType mem_wr[VFACTOR], acc_out_arr[VFACTOR];
-	DType a_arr[VFACTOR], b_arr[VFACTOR], c_arr[VFACTOR];
-	DType acc_in_arr[VFACTOR];
+    DType row_arr3[VFACTOR];
+    DType row_arr2[VFACTOR + 2];
+    DType row_arr1[VFACTOR];
+    DType mem_wr[VFACTOR], acc_out_arr[VFACTOR];
+    DType a_arr[VFACTOR], b_arr[VFACTOR], c_arr[VFACTOR];
+    DType acc_in_arr[VFACTOR];
 
 
     // partioning array into individual registers
-	#pragma HLS ARRAY_PARTITION variable=row_arr3 complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=row_arr2 complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=row_arr1 complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=mem_wr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=row_arr3 complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=row_arr2 complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=row_arr1 complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=mem_wr complete dim=1
 
-	#pragma HLS ARRAY_PARTITION variable=a_arr complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=b_arr complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=c_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=a_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=b_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=c_arr complete dim=1
 
 
     // cyclic buffers to hold larger number of elements
-	uint256_dt row1_n[max_depth_8];
-	uint256_dt row2_n[max_depth_8];
-	uint256_dt row3_n[max_depth_8];
+    uint256_dt row1_n[DMAX/VFACTOR];
+    uint256_dt row2_n[DMAX/VFACTOR];
+    uint256_dt row3_n[DMAX/VFACTOR];
 
-	uint256_dt row1_acc_n[max_depth_8];
+    uint256_dt row1_acc_n[DMAX/VFACTOR];
 
 
-	unsigned short sizex = data_g.sizex;
-	unsigned short end_row = data_g.end_row;
-	unsigned short outer_loop_limit = data_g.outer_loop_limit;
-	unsigned int grid_size = data_g.gridsize;
-	unsigned short end_index_minus1 = data_g.endindex_minus1;
-	unsigned short end_row_plus1 = data_g.endrow_plus1;
-	unsigned short end_row_plus2 = data_g.endrow_plus2;
-	unsigned short end_row_minus1 = data_g.endrow_minus1;
-	unsigned int grid_data_size = data_g.total_itr_256;
+    unsigned short sizex = data_g.sizex;
+    unsigned short end_row = data_g.end_row;
+    unsigned short outer_loop_limit = data_g.outer_loop_limit;
+    unsigned int grid_size = data_g.gridsize;
+    unsigned short end_index_minus1 = data_g.endindex_minus1;
+    unsigned short end_row_plus1 = data_g.endrow_plus1;
+    unsigned short end_row_plus2 = data_g.endrow_plus2;
+    unsigned short end_row_minus1 = data_g.endrow_minus1;
+    unsigned int grid_data_size = data_g.total_itr_256;
 
     uint256_dt tmp2_f1, tmp2_b1;
     uint256_dt tmp1, tmp2, tmp3;
@@ -68,23 +68,23 @@ static void stencil_2d( hls::stream<uint256_dt> &rd_buffer, hls::stream<uint256_
         #pragma HLS loop_tripcount min=204800 max=1000000 avg=1000000
         #pragma HLS PIPELINE II=1
 
-    	i = i_d;
-    	j = j_d;
+        i = i_d;
+        j = j_d;
 
-    	bool cmp_j = (j == end_index -1 );
-    	bool cmp_i = (i == outer_loop_limit -1);
+        bool cmp_j = (j == end_index -1 );
+        bool cmp_i = (i == outer_loop_limit -1);
 
-    	if(cmp_j){
-    		j_d = 0;
-    	} else {
-    		j_d++;
-    	}
+        if(cmp_j){
+            j_d = 0;
+        } else {
+            j_d++;
+        }
 
-    	if(cmp_j && cmp_i){
-    		i_d = 1;
-    	} else if(cmp_j){
-    		i_d++;
-    	}
+        if(cmp_j && cmp_i){
+            i_d = 1;
+        } else if(cmp_j){
+            i_d++;
+        }
 
 
         tmp1 = row2_n[j_l];
@@ -101,13 +101,13 @@ static void stencil_2d( hls::stream<uint256_dt> &rd_buffer, hls::stream<uint256_
         // continuous data-flow for all the grids in the batch
         bool cond_tmp1 = (itr < grid_data_size);
         if(cond_tmp1){
-        	rd_in_vec= rd_buffer.read();
+            rd_in_vec= rd_buffer.read();
             acc_in_vec = acc_in.read();
         }
 
         vec2arr: for(int v = 0; v < VFACTOR; v++){
-        	DType tmp = uint2FP_ript<FPPREC, DType>(acc_in_vec.range(DSIZE * (v + 1) - 1, v * DSIZE)) + uint2FP_ript<FPPREC, DType>(rd_in_vec.range(DSIZE * (v + 1) - 1, v * DSIZE));
-        	tmp3.range(DSIZE * (v + 1) - 1, v * DSIZE) = FP2uint_ript(tmp);
+            DType tmp = uint2FP_ript<FPPREC, DType>(acc_in_vec.range(DSIZE * (v + 1) - 1, v * DSIZE)) + uint2FP_ript<FPPREC, DType>(rd_in_vec.range(DSIZE * (v + 1) - 1, v * DSIZE));
+            tmp3.range(DSIZE * (v + 1) - 1, v * DSIZE) = FP2uint_ript(tmp);
 
         }
 
@@ -171,9 +171,9 @@ static void stencil_2d( hls::stream<uint256_dt> &rd_buffer, hls::stream<uint256_
 
     }
 
-	#undef SHIFT
-	#undef VFACTOR
-	#undef DSIZE
+    #undef SHIFT
+    #undef VFACTOR
+    #undef DSIZE
 }
 
 #endif

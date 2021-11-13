@@ -6,7 +6,7 @@
 #ifndef __BTHOMAS_H__
 #define __BTHOMAS_H__
 
-template<bool FPPREC, class DType>
+template<bool FPPREC, class DType, int DMAX>
 static void thomas_interleave(hls::stream<uint256_dt> &d_stm, hls::stream<uint256_dt> &d_fw_stm,
 		ap_uint<12> d0, ap_uint<14> B, int ReadLimit){
 
@@ -17,7 +17,7 @@ static void thomas_interleave(hls::stream<uint256_dt> &d_stm, hls::stream<uint25
 	#define NBLK 	(32<<FPPREC)
 	const int n_blk = NBLK;
 
-	uint256_dt  d2[N_MAX*NBLK*2];
+	uint256_dt  d2[DMAX*NBLK*2];
 	#pragma HLS RESOURCE variable=d2 core=XPM_MEMORY uram latency=2
 	ap_uint<16> batd1 = 0;
 	ap_uint<7> id1 =0;
@@ -46,8 +46,8 @@ static void thomas_interleave(hls::stream<uint256_dt> &d_stm, hls::stream<uint25
 				id1++;
 			}
 
-			unsigned int offsetR = ((bat & 1) == 0) ?  N_MAX*NBLK : 0;
-			unsigned int offsetW = ((bat & 1) == 0) ?  0 : N_MAX*NBLK;
+			unsigned int offsetR = ((bat & 1) == 0) ?  DMAX*NBLK : 0;
+			unsigned int offsetW = ((bat & 1) == 0) ?  0 : DMAX*NBLK;
 
 			ap_uint<20> countr1 = register_it<int>((bat*NBLK) + i);
 			int count = countr1 * d0 + j;
@@ -73,7 +73,7 @@ static void thomas_interleave(hls::stream<uint256_dt> &d_stm, hls::stream<uint25
 	#undef NBLK
 }
 
-template<bool FPPREC, class DType>
+template<bool FPPREC, class DType, int DMAX>
 static void thomas_forward(hls::stream<uint256_dt> &d_fw_stm, hls::stream<uint256_dt> &c2_fw_stm, hls::stream<uint256_dt> &d2_fw_stm,
 		ap_uint<12> d0, ap_uint<14> B){
 
@@ -84,8 +84,8 @@ static void thomas_forward(hls::stream<uint256_dt> &d_fw_stm, hls::stream<uint25
 	#define NBLK 	(32<<FPPREC)
 	const int n_blk = NBLK;
 
-	uint256_dt  c2_fw[N_MAX*NBLK*2];
-	uint256_dt  d2_fw[N_MAX*NBLK*2];
+	uint256_dt  c2_fw[DMAX*NBLK*2];
+	uint256_dt  d2_fw[DMAX*NBLK*2];
 
 	#pragma HLS RESOURCE variable=c2_fw core=XPM_MEMORY uram latency=2
 	#pragma HLS RESOURCE variable=d2_fw core=XPM_MEMORY uram latency=2
@@ -171,8 +171,8 @@ static void thomas_forward(hls::stream<uint256_dt> &d_fw_stm, hls::stream<uint25
 		window_b2[k] = vec_bb_w;
 		window_d2[k] = vec_dd_w;
 		window_c2[k] = vec_cc_w;
-		unsigned int offsetR = ((bat & 1) == 0) ?  N_MAX*NBLK : 0;
-		unsigned int offsetW = ((bat & 1) == 0) ?  0 : N_MAX*NBLK;
+		unsigned int offsetR = ((bat & 1) == 0) ?  DMAX*NBLK : 0;
+		unsigned int offsetW = ((bat & 1) == 0) ?  0 : DMAX*NBLK;
 		int indW =  k*d0+i+offsetW;
 		c2_fw[indW] = vec_cc_w;
 		d2_fw[indW] = d2_fw_write;
@@ -196,7 +196,7 @@ static void thomas_forward(hls::stream<uint256_dt> &d_fw_stm, hls::stream<uint25
 }
 
 
-template<bool FPPREC, class DType>
+template<bool FPPREC, class DType, int DMAX>
 static void thomas_backward(hls::stream<uint256_dt> &c2_fw_stm, hls::stream<uint256_dt> &d2_fw_stm, hls::stream<uint256_dt> &u_stm,
 		ap_uint<12> d0, ap_uint<14> B, int ReadLimit){
 
@@ -206,7 +206,7 @@ static void thomas_backward(hls::stream<uint256_dt> &c2_fw_stm, hls::stream<uint
 	#define NBLK 	(32<<FPPREC)
 	const int n_blk = NBLK;
 
-	uint256_dt  u2[N_MAX*NBLK*2];
+	uint256_dt  u2[DMAX*NBLK*2];
 	#pragma HLS RESOURCE variable=u2 core=XPM_MEMORY uram = latency=2
 
 	uint256_dt window_u2[NBLK];
@@ -267,8 +267,8 @@ static void thomas_backward(hls::stream<uint256_dt> &c2_fw_stm, hls::stream<uint
 			vec_u2_w.range(DSIZE*(v+1)-1,DSIZE*v) = FP2uint_ript(u_new);
 		}
 
-		unsigned int offsetR = ((bat & 1) == 0) ?  N_MAX*NBLK : 0;
-		unsigned int offsetW = ((bat & 1) == 0) ?  0 : N_MAX*NBLK;
+		unsigned int offsetR = ((bat & 1) == 0) ?  DMAX*NBLK : 0;
+		unsigned int offsetW = ((bat & 1) == 0) ?  0 : DMAX*NBLK;
 
 		int indW = k* d0 + i + offsetW;
 		int indR = id*NBLK+k + offsetR;

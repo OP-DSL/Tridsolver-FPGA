@@ -1,6 +1,5 @@
 #include <ap_int.h>
 #include <hls_stream.h>
-#include <data_types.h>
 
 #ifndef __DATA_TYPES_H__
 #define __DATA_TYPES_H__

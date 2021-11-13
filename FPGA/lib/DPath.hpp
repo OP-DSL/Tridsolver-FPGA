@@ -8,6 +8,7 @@
 
 // Following are the main functions used to create data path
 // Two Dimensional TriDiagonal Solvers in Batched Mode
+template <bool FPPREC>
 static void read_dat(
 		const uint512_dt*d, hls::stream<uint256_dt> &d_stm,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B);
@@ -44,17 +45,21 @@ template <bool FPPREC, class DType>
 static void stream_8x8transpose(hls::stream<uint256_dt> &in, hls::stream<uint256_dt> &out0,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B, bool transpose);
 
+template <bool FPPREC>
 static void write_dat(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B);
 
 
 
 // TDMA Modules
+template <bool FPPREC>
 static void read_dat(
 		const uint512_dt*d, hls::stream<uint256_dt> &d_stm,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B){
 
-	ap_uint<8> XBlocks = (M >> 4);
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<8> XBlocks = (M >> SHIFT);
 	int total_itr = XBlocks * N * B;
 	for (int itr = 0; itr < total_itr; itr++){
 		#pragma HLS loop_tripcount min=102400 max=204800 avg=204800
@@ -63,6 +68,8 @@ static void read_dat(
 		d_stm << tmp_d.range(255,0);
 		d_stm << tmp_d.range(511,256);
 	}
+
+	#undef SHIFT
 
 }
 
@@ -474,11 +481,13 @@ static void stream_8x8transpose(hls::stream<uint256_dt> &in, hls::stream<uint256
 	#undef ADJUST
 }
 
-
+template <bool FPPREC>
 static void write_dat(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B){
 
-	ap_uint<8> XBlocks = (M >> 4);
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<8> XBlocks = (M >> SHIFT);
 	int toltal_itr = XBlocks * N * B;
 	for(int itr= 0; itr < toltal_itr; itr++){
 		#pragma HLS PIPELINE II=2
@@ -488,6 +497,8 @@ static void write_dat(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
 		tmp.range(511,256) = u_stm.read();
 		u[itr] = tmp;;
 	}
+
+	#undef SHIFT
 }
 
 #endif
