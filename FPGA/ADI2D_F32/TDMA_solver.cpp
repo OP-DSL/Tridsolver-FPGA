@@ -85,8 +85,8 @@ static void TDMA1( const uint512_dt* d, uint512_dt* u,
 	int total_512 = (data_g.total_itr_256 >> 1);
 
 	#pragma HLS dataflow
-	read_dat(d, d_stm_0[0], M, N, B);
-	read_dat(acc1, acc_stm[0], M, N, B);
+	read_dat<0>(d, d_stm_0[0], M, N, B);
+	read_dat<0>(acc1, acc_stm[0], M, N, B);
 
 	// iteration one
 	stencil_2d<0, float, 128>(d_stm_0[0], d_stm_0[1], acc_stm[0], acc_stm[1], data_g, dnt_acc_updt);
@@ -150,8 +150,8 @@ static void TDMA1( const uint512_dt* d, uint512_dt* u,
 	thomas_backward<0, float, 128>(c2_fw_stm[5], d2_fw_stm[5], u_stm_2[3], N, B_Y, ReadLimit_Y);
 	col2row<0, 128>(u_stm_2[3], u_stm_2[4], M, N, B);
 
-	write_dat(acc2, acc_stm[5], M, N, B);
-	write_dat(u, u_stm_2[4], M, N, B);
+	write_dat<0>(acc2, acc_stm[5], M, N, B);
+	write_dat<0>(u, u_stm_2[4], M, N, B);
 
 
 
