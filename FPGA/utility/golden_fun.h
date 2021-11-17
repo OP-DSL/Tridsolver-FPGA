@@ -49,10 +49,17 @@ inline double elapsed_time(double *et) {
 }
 
 
-void print_help() ;
-void timing_start(int prof, double *timer);
-void timing_end(int prof, double *timer, double *elapsed_accumulate, char *str);
-void thomas_golden(float* __restrict a, float* __restrict b, float* __restrict c, float* __restrict d, float* __restrict u, int N, int batch);
-double square_error(float* golden, float* FPGA, int nx, int ny, int nz);
+template <class DType>
+class golden
+{
+public:
+  golden(){};
+  ~golden(){};
+  void thomas_golden(DType* __restrict a, DType* __restrict b, DType* __restrict c,
+      DType* __restrict d, DType* __restrict u, int N, int stride);
+
+  double square_error(DType* golden, DType* FPGA, int nx, int ny, int nz);
+
+};
 
 #endif

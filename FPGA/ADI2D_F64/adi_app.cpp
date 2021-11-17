@@ -115,17 +115,8 @@ int main(int argc, char* argv[]) {
 
   printf("\nGrid dimensions: %d x %d x %d\n", nx, ny, nz);
 
-//  if( nx>N_MAX /*|| ny>N_MAX || nz>N_MAX*/ ) {
-//    printf("Dimension can not exceed N_MAX=%d due to hard-coded local array sizes\n", N_MAX);
-//    return -1;
-//  }
-  // allocate memory for arrays
-//  int Xdim_B = ((nx *nz + 63)/64)* 64;
 
 	int w_count, b_count, r_count;
-	int ReadLimit_x = ((nx*ny+3)>>2)*(nx);
-	int ReadLimit_y = (nx/4)*nz*ny ;
-//	int min_buffer_size = ((16*nx/8) + std::min(ReadLimit_x, 32*nx)*3 + 2*(nx/8*ny) + std::min(ReadLimit_y, 32*ny)*3)/2;
 	int min_buffer_size = ((8*nx/4) + 64*nx*3 + 2*(nx/4*ny) + 64*ny*3)/2;
 	int fifo_tr_size = (nx/4*ny*nz)/2;
 
@@ -347,17 +338,11 @@ int main(int argc, char* argv[]) {
   std::vector<cl::Buffer> buffer_acc2(num_cus);
 
   for(int i = 0; i < num_cus; i++){
-//	  OCL_CHECK(err, buffer_da[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_da_ext[i], &err));
-//	  OCL_CHECK(err, buffer_db[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_db_ext[i], &err));
-//	  OCL_CHECK(err, buffer_dc[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dc_ext[i], &err));
-	  OCL_CHECK(err, buffer_dd[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dd_ext[i], &err));
 
+	  OCL_CHECK(err, buffer_dd[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dd_ext[i], &err));
 	  OCL_CHECK(err, buffer_du[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX| CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_du_ext[i], &err));
 	  OCL_CHECK(err, buffer_dbuffer1[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX| CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dbuffer1_ext[i], &err));
 	  OCL_CHECK(err, buffer_dbuffer2[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX| CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dbuffer2_ext[i], &err));
-//	  OCL_CHECK(err, buffer_dbuffer3[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX| CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dbuffer3_ext[i], &err));
-//	  OCL_CHECK(err, buffer_dbuffer4[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX| CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dbuffer4_ext[i], &err));
-
 	  OCL_CHECK(err, buffer_acc1[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_acc1_ext[i], &err));
 	  OCL_CHECK(err, buffer_acc2[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_acc2_ext[i], &err));
   }
@@ -365,9 +350,6 @@ int main(int argc, char* argv[]) {
   //Set the Kernel Arguments
   for(int i = 0; i < num_cus; i++){
 	  int narg = 0;
-//	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_da[i]));
-//	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_db[i]));
-//	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_dc[i]));
 	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_dd[i]));
 	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_du[i]));
 	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_acc1[i]));
@@ -381,14 +363,11 @@ int main(int argc, char* argv[]) {
 	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, w_count));
 	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, b_count));
 	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, r_count));
-	  OCL_CHECK(err, err = q.enqueueMigrateMemObjects({/*buffer_da[i], buffer_db[i], buffer_dc[i],*/ buffer_dd[i], buffer_du[i], buffer_acc1[i]}, 0 /* 0 means from host*/));
+	  OCL_CHECK(err, err = q.enqueueMigrateMemObjects({ buffer_dd[i], buffer_du[i], buffer_acc1[i]}, 0 /* 0 means from host*/));
   }
 
 
-  //Copy input data to device global memory
-//  for(int i = 0; i < num_cus; i++){
 
-//  }
   q.finish();
 
 	//Launch the Kernel
@@ -415,7 +394,7 @@ int main(int argc, char* argv[]) {
 
 	q.finish();
 	for(int i = 0; i < num_cus; i++){
-		OCL_CHECK(err, err = q.enqueueMigrateMemObjects({/*buffer_da[i], buffer_db[i], buffer_dc[i],*/ buffer_dd[i], buffer_du[i], buffer_acc1[i], buffer_acc2[i]}, CL_MIGRATE_MEM_OBJECT_HOST));
+		OCL_CHECK(err, err = q.enqueueMigrateMemObjects({ buffer_dd[i], buffer_du[i], buffer_acc1[i], buffer_acc2[i]}, CL_MIGRATE_MEM_OBJECT_HOST));
 	}
     q.finish();
 
@@ -424,9 +403,10 @@ int main(int argc, char* argv[]) {
   // Compute sequentially
   elapsed_time(&timer);
 
+  golden<double> Gold;
 
   // Pre proc
-  omp_set_num_threads(16);
+  omp_set_num_threads(1);
   auto start = std::chrono::steady_clock::now();
   for(int itr = 0; itr < 4*iter; itr++){
 
@@ -469,7 +449,7 @@ int main(int argc, char* argv[]) {
 		  for(int i = 0; i < nz; i++){
 			  for(int j = 0; j < ny; j++){
 				  int ind = i*ny*nx+j*nx;
-				  thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_d[ind], &h_u[ind], nx, 1);
+				  Gold.thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_d[ind], &h_u[ind], nx, 1);
 			  }
 		  }
 
@@ -478,7 +458,7 @@ int main(int argc, char* argv[]) {
 		  for(int j = 0; j < nz; j++){
 			  for(int i =0; i < nx; i++){
 				  int ind = i + j*nx*ny;
-				  thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_u[ind], &h_d[ind], ny, nx);
+				  Gold.thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_u[ind], &h_d[ind], ny, nx);
 			  }
 		  }
 ////
@@ -503,18 +483,9 @@ int main(int argc, char* argv[]) {
 
 
   for(int i = 0; i <  num_cus; i++){
-//	  square_error(h_ax, d_a[i], nx, ny, nz);
-//	  square_error(h_bx, d_b[i], nx, ny, nz);
-//	  square_error(h_cx, d_c[i], nx, ny, nz);
-	  square_error(h_d, d_u[i], nx, ny, nz);
-//	  square_error(h_acc, d_acc1[i], nx, ny, nz);
-//	  square_error(h_d, d_d[i], nx, ny, nz);
+	  Gold.square_error(h_d, d_u[i], nx, ny, nz);
   }
-//  square_error(h_acc, d_acc1, nx*ny*nz);
-//  square_error(h_u,  d_u, nx*ny*nz);
-//  square_error(h_ax, d_ax, nx*ny*nz);
-//  square_error(h_bx, d_bx, nx*ny*nz);
-//  square_error(h_cx, d_cx, nx*ny*nz);
+
 
   printf("\nComputing ADI on FPGA: %f (s) \n", k_time);
   float bandwidth = iter*2*2*sizeof(double)* nx* ny*nz/(k_time * 1000000000);

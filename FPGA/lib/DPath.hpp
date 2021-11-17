@@ -13,6 +13,19 @@ static void read_dat(
 		const uint512_dt*d, hls::stream<uint256_dt> &d_stm,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B);
 
+template <bool FPPREC>
+static void read_dat512(
+		const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B);
+
+template<bool FPPREC>
+static void read_plane(const uint512_dt*d, hls::stream<uint256_dt> &d_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ);
+
+template<bool FPPREC>
+static void read_plane512(const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ);
+
 static void FIFO_256_512(hls::stream<uint256_dt> &stm_in, 
 	hls::stream<uint512_dt> &stm_out, int total_512);
 
@@ -49,6 +62,17 @@ template <bool FPPREC>
 static void write_dat(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B);
 
+template <bool FPPREC>
+static void write_dat512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B);
+
+template<bool FPPREC>
+static void write_plane(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ);
+
+template<bool FPPREC>
+static void write_plane512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ);
 
 
 // TDMA Modules
@@ -67,6 +91,26 @@ static void read_dat(
 		uint512_dt tmp_d =  d[itr];
 		d_stm << tmp_d.range(255,0);
 		d_stm << tmp_d.range(511,256);
+	}
+
+	#undef SHIFT
+
+}
+
+template <bool FPPREC>
+static void read_dat512(
+		const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B){
+
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<8> XBlocks = (M >> SHIFT);
+	int total_itr = XBlocks * N * B;
+	for (int itr = 0; itr < total_itr; itr++){
+		#pragma HLS loop_tripcount min=102400 max=204800 avg=204800
+		#pragma HLS PIPELINE II=1
+		uint512_dt tmp_d =  d[itr];
+		d_stm << tmp_d;
 	}
 
 	#undef SHIFT
@@ -499,6 +543,252 @@ static void write_dat(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
 	}
 
 	#undef SHIFT
+}
+
+template <bool FPPREC>
+static void write_dat512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<14> B){
+	#define SHIFT (4-FPPREC)
+	ap_uint<8> XBlocks = (M >> SHIFT);
+	int toltal_itr = XBlocks * N * B;
+	for(int itr= 0; itr < toltal_itr; itr++){
+		#pragma HLS PIPELINE II=1
+		#pragma HLS loop_tripcount min=102400 max=204800 avg=204800
+		uint512_dt tmp;
+		tmp = u_stm.read();
+		u[itr] = tmp;
+	}
+	#undef SHIFT
+}
+
+
+// TDMA Modules
+template<bool FPPREC>
+static void read_plane(const uint512_dt*d, hls::stream<uint256_dt> &d_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ){
+
+
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<9> d0,d1,d2;
+	ap_uint<24> off_d0, off_d1, off_d2;
+	switch(dirXYZ){
+		case 0 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 1 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 2 : {d0 = (M>>SHIFT); d1 = L; d2 = N; off_d0 = 1; off_d1 = N*(M>>SHIFT); off_d2 = (M>>SHIFT); break;}
+		default :{d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+	}
+
+
+
+	ap_uint<10> batd = 0;
+	ap_uint<10> id =0;
+	ap_uint<10> jd = 0;
+	int total_itr = B*d2*d1;
+	for(int itr= 0; itr < total_itr; itr++){
+		#pragma HLS PIPELINE II=1
+		#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
+
+		ap_uint<10> bat = batd;
+		ap_uint<10> i = id;
+		ap_uint<10> j = jd;
+
+
+		if(j == d1 -1){
+			jd = 0;
+		} else {
+			jd++;
+		}
+
+		if(j == d1 -1 && i == d2 -1){
+			id = 0;
+			batd++;
+		} else if(j == d1 -1){
+			id++;
+		}
+		int ind = bat*(M>>SHIFT)*N*L + j*off_d1 + i *off_d2;
+		for(ap_uint<9> k = 0; k < d0; k++){
+			#pragma HLS loop_tripcount min=2 max=16 avg=16
+			#pragma HLS PIPELINE II=2
+			uint512_dt tmp_d =  d[ind+k];
+
+			d_stm << tmp_d.range(255,0);
+			d_stm << tmp_d.range(511,256);
+		}
+
+	}
+
+	#undef SHIFT
+
+}
+
+template<bool FPPREC>
+static void read_plane512(const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ){
+
+
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<9> d0,d1,d2;
+	ap_uint<24> off_d0, off_d1, off_d2;
+	switch(dirXYZ){
+		case 0 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 1 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 2 : {d0 = (M>>SHIFT); d1 = L; d2 = N; off_d0 = 1; off_d1 = N*(M>>SHIFT); off_d2 = (M>>SHIFT); break;}
+		default :{d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+	}
+
+
+
+	ap_uint<10> batd = 0;
+	ap_uint<10> id =0;
+	ap_uint<10> jd = 0;
+	int total_itr = B*d2*d1;
+	for(int itr= 0; itr < total_itr; itr++){
+		#pragma HLS PIPELINE II=1
+		#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
+
+		ap_uint<10> bat = batd;
+		ap_uint<10> i = id;
+		ap_uint<10> j = jd;
+
+
+		if(j == d1 -1){
+			jd = 0;
+		} else {
+			jd++;
+		}
+
+		if(j == d1 -1 && i == d2 -1){
+			id = 0;
+			batd++;
+		} else if(j == d1 -1){
+			id++;
+		}
+		int ind = bat*(M>>SHIFT)*N*L + j*off_d1 + i *off_d2;
+		for(ap_uint<9> k = 0; k < d0; k++){
+			#pragma HLS loop_tripcount min=2 max=16 avg=16
+			#pragma HLS PIPELINE II=1
+			uint512_dt tmp_d =  d[ind+k];
+
+			d_stm << tmp_d;
+		}
+
+	}
+
+	#undef SHIFT
+
+}
+
+template<bool FPPREC>
+static void write_plane(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ){
+
+
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<9> d0,d1,d2;
+	ap_uint<24> off_d0, off_d1, off_d2;
+	switch(dirXYZ){
+		case 0 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 1 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 2 : {d0 = (M>>SHIFT); d1 = L; d2 = N; off_d0 = 1; off_d1 = N*(M>>SHIFT); off_d2 = (M>>SHIFT); break;}
+		default :{d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+	}
+
+	ap_uint<10> batd = 0;
+	ap_uint<10> id =0;
+	ap_uint<10> jd = 0;
+	int total_itr = B*d2*d1;
+	for(int itr= 0; itr < total_itr; itr++){
+		#pragma HLS PIPELINE II=1
+		#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
+
+		ap_uint<10> bat = batd;
+		ap_uint<10> i = id;
+		ap_uint<10> j = jd;
+
+
+		if(j == d1 -1){
+			jd = 0;
+		} else {
+			jd++;
+		}
+
+		if(j == d1 -1 && i == d2 -1){
+			id = 0;
+			batd++;
+		} else if(j == d1 -1){
+			id++;
+		}
+		int ind = bat*(M>>SHIFT)*N*L + j*off_d1 + i *off_d2;
+		for(ap_uint<9> k = 0; k < d0; k++){
+			#pragma HLS loop_tripcount min=2 max=16 avg=16
+			#pragma HLS PIPELINE II=2
+			uint512_dt tmp;
+			tmp.range(255,0) = u_stm.read();
+			tmp.range(511,256) = u_stm.read();
+			u[ind+k] = tmp;
+		}
+	}
+
+	#undef SHIFT
+
+}
+
+template<bool FPPREC>
+static void write_plane512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
+		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ){
+
+
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<9> d0,d1,d2;
+	ap_uint<24> off_d0, off_d1, off_d2;
+	switch(dirXYZ){
+		case 0 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 1 : {d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+		case 2 : {d0 = (M>>SHIFT); d1 = L; d2 = N; off_d0 = 1; off_d1 = N*(M>>SHIFT); off_d2 = (M>>SHIFT); break;}
+		default :{d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
+	}
+
+	ap_uint<10> batd = 0;
+	ap_uint<10> id =0;
+	ap_uint<10> jd = 0;
+	int total_itr = B*d2*d1;
+	for(int itr= 0; itr < total_itr; itr++){
+		#pragma HLS PIPELINE II=1
+		#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
+
+		ap_uint<10> bat = batd;
+		ap_uint<10> i = id;
+		ap_uint<10> j = jd;
+
+
+		if(j == d1 -1){
+			jd = 0;
+		} else {
+			jd++;
+		}
+
+		if(j == d1 -1 && i == d2 -1){
+			id = 0;
+			batd++;
+		} else if(j == d1 -1){
+			id++;
+		}
+		int ind = bat*(M>>SHIFT)*N*L + j*off_d1 + i *off_d2;
+		for(ap_uint<9> k = 0; k < d0; k++){
+			#pragma HLS loop_tripcount min=2 max=16 avg=16
+			#pragma HLS PIPELINE II=2
+			uint512_dt tmp;
+			tmp = u_stm.read();
+			u[ind+k] = tmp;
+		}
+	}
+
+	#undef SHIFT
+
 }
 
 #endif

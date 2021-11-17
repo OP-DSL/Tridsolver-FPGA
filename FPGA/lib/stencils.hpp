@@ -176,4 +176,194 @@ static void stencil_2d( hls::stream<uint256_dt> &rd_buffer, hls::stream<uint256_
     #undef DSIZE
 }
 
+
+
+template <bool FPPREC, class DType, int DMAX>
+static void stencil_3d( hls::stream<uint256_dt> &rd_buffer,  hls::stream<uint256_dt> &d,
+        hls::stream<uint256_dt> &acc_in,  hls::stream<uint256_dt> &acc_out, struct data_G_3d data_g, bool dnt_update){
+
+    #define SHIFT (3-FPPREC)
+    #define VFACTOR ((1 << SHIFT))
+    #define DSIZE   (256/VFACTOR)
+
+    unsigned short xblocks = data_g.xblocks;
+    unsigned short sizex = data_g.sizex;
+    unsigned short sizey = data_g.sizey;
+    unsigned short sizez = data_g.sizez;
+    unsigned short limit_z = data_g.limit_z;
+    unsigned short grid_sizey = data_g.grid_sizey;
+    unsigned short grid_sizez = data_g.grid_sizez;
+
+    unsigned int line_diff = data_g.line_diff;
+    unsigned int plane_diff = data_g.plane_diff;
+    unsigned int gridsize = data_g.gridsize_pr;
+
+    unsigned int limit_read = data_g.gridsize_da;
+
+    DType s_1_1_2_arr[VFACTOR];
+    DType s_1_2_1_arr[VFACTOR];
+    DType s_1_1_1_arr[VFACTOR*3];
+    DType s_1_0_1_arr[VFACTOR];
+    DType s_1_1_0_arr[VFACTOR];
+
+    DType mem_a[VFACTOR];
+    DType mem_b[VFACTOR];
+    DType mem_c[VFACTOR];
+    DType mem_d[VFACTOR];
+
+    DType acc_in_arr[VFACTOR];
+    DType acc_out_arr[VFACTOR];
+
+    #pragma HLS ARRAY_PARTITION variable=s_1_1_2_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=s_1_2_1_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=s_1_1_1_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=s_1_0_1_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=s_1_1_0_arr complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=mem_d complete dim=1
+
+    uint256_dt window_1[DMAX*DMAX/VFACTOR];
+    uint256_dt window_2[DMAX/VFACTOR];
+    uint256_dt window_3[DMAX/VFACTOR];
+    uint256_dt window_4[DMAX*DMAX/VFACTOR];
+
+    #pragma HLS RESOURCE variable=window_1 core=XPM_MEMORY uram latency=2
+    #pragma HLS RESOURCE variable=window_2 core=RAM_1P_BRAM latency=2
+    #pragma HLS RESOURCE variable=window_3 core=RAM_1P_BRAM latency=2
+    #pragma HLS RESOURCE variable=window_4 core=XPM_MEMORY uram latency=2
+
+    uint256_dt s_1_1_2, s_1_2_1, s_1_1_1, s_1_1_1_b, s_1_1_1_f, s_1_0_1, s_1_1_0;
+    uint256_dt update_a, update_b, update_c, update_d;
+    uint256_dt acc_in_vec, acc_out_vec;
+
+
+    unsigned short i = 0, j = 0, k = 0;
+    unsigned short j_p = 0, j_l = 0;
+    for(unsigned int itr = 0; itr < gridsize; itr++) {
+        #pragma HLS loop_tripcount min=min_grid max=max_grid avg=avg_grid
+        #pragma HLS PIPELINE II=1
+        bool cond_x = (k == xblocks);
+        bool cond_y = (j == grid_sizey -1);
+        bool cond_z = (i == limit_z - 1);
+
+        if(k == xblocks){
+            k = 0;
+        }
+
+        if(cond_y && cond_x){
+            j = 0;
+        }else if(cond_x){
+            j++;
+        }
+
+        if(cond_x && cond_y && cond_z){
+            i = 1;
+        } else if(cond_y && cond_x){
+            i++;
+        }
+
+
+
+        s_1_1_0 = window_4[j_p];
+
+        s_1_0_1 = window_3[j_l];
+        window_4[j_p] = s_1_0_1;
+
+        s_1_1_1_b = s_1_1_1;
+        window_3[j_l] = s_1_1_1_b;
+
+        s_1_1_1 = s_1_1_1_f;
+        s_1_1_1_f = window_2[j_l];  // read
+
+        s_1_2_1 = window_1[j_p];   // read
+        window_2[j_l] = s_1_2_1;    //set
+
+
+        bool cond_tmp1 = (itr < limit_read);
+        uint256_dt tmp_rd;
+        if(cond_tmp1){
+            tmp_rd = rd_buffer.read(); // set
+            acc_in_vec = acc_in.read();
+        }
+
+        DType tmp_rd_arr[VFACTOR];
+        vec2arr_tmp_read: for(int v = 0; v < VFACTOR; v++){
+            tmp_rd_arr[v]               =  uint2FP_ript<FPPREC, DType>(tmp_rd.range(DSIZE * (v + 1) - 1, v * DSIZE));
+            acc_in_arr[v]               =  uint2FP_ript<FPPREC, DType>(acc_in_vec.range(DSIZE * (v + 1) - 1, v * DSIZE));;
+            s_1_1_2.range(DSIZE * (v + 1) - 1, v * DSIZE) = FP2uint_ript(tmp_rd_arr[v] + acc_in_arr[v]);
+
+        }
+        window_1[j_p] = s_1_1_2; // set
+
+
+
+        j_p++;
+        if(j_p == plane_diff){
+            j_p = 0;
+        }
+
+        j_l++;
+        if(j_l == line_diff){
+            j_l = 0;
+        }
+
+
+
+
+        vec2arr: for(int k = 0; k < VFACTOR; k++){
+            s_1_1_2_arr[k]              =  uint2FP_ript<FPPREC, DType>(s_1_1_2.range(DSIZE * (k + 1) - 1, k * DSIZE));
+            s_1_2_1_arr[k]              =  uint2FP_ript<FPPREC, DType>(s_1_2_1.range(DSIZE * (k + 1) - 1, k * DSIZE));
+            s_1_1_1_arr[k]              =  uint2FP_ript<FPPREC, DType>(s_1_1_1_b.range(DSIZE * (k + 1) - 1, k * DSIZE));
+            s_1_1_1_arr[k+VFACTOR]  =  uint2FP_ript<FPPREC, DType>(s_1_1_1.range(DSIZE * (k + 1) - 1, k * DSIZE));
+            s_1_1_1_arr[k+VFACTOR*2] =  uint2FP_ript<FPPREC, DType>(s_1_1_1_f.range(DSIZE * (k + 1) - 1, k * DSIZE));
+            s_1_0_1_arr[k]              =  uint2FP_ript<FPPREC, DType>(s_1_0_1.range(DSIZE * (k + 1) - 1, k * DSIZE));
+            s_1_1_0_arr[k]              =  uint2FP_ript<FPPREC, DType>(s_1_1_0.range(DSIZE * (k + 1) - 1, k * DSIZE));
+        }
+
+        unsigned short y_index = j;
+        process: for(short q = 0; q < VFACTOR; q++){
+            short index = (k << SHIFT) + q;
+            DType r1_1_2 =  s_1_1_2_arr[q];
+            DType r1_2_1 =  s_1_2_1_arr[q];
+            DType r0_1_1 =  s_1_1_1_arr[q+ VFACTOR-1];
+            DType r1_1_1 =  s_1_1_1_arr[q+VFACTOR] * 6.0f;
+            DType r2_1_1 =  s_1_1_1_arr[q+VFACTOR+1];
+            DType r1_0_1 =  s_1_0_1_arr[q];
+            DType r1_1_0 =  s_1_1_0_arr[q];
+
+            DType f1 = r1_1_2 + r1_2_1;
+            DType f2 = r0_1_1 - r1_1_1;
+            DType f3 = r2_1_1 + r1_0_1;
+
+
+            DType r1 = f1 + f2;
+            DType r2=  f3 + r1_1_0;
+
+            DType result  = r1 + r2;
+            bool change_cond = register_it <bool>(index <= 0 || index > sizex || (i <= 1) || (i >= limit_z -1) || (y_index <= 0) || (y_index >= grid_sizey -1));
+            mem_d[q] = change_cond ? 0.0f : result;
+
+            acc_out_arr[q] = dnt_update ? acc_in_arr[q] : s_1_1_1_arr[q+VFACTOR];
+        }
+
+        array2vec: for(int v = 0; v < VFACTOR; v++){
+            update_d.range(DSIZE * (v + 1) - 1, v * DSIZE) = FP2uint_ript(mem_d[v]);
+            acc_out_vec.range(DSIZE * (v + 1) - 1, v * DSIZE) = FP2uint_ript(acc_out_arr[v]);
+        }
+
+        bool cond_wr = (i >= 1) && ( i < limit_z);
+        if(cond_wr ) {
+            d << update_d;
+            acc_out << acc_out_vec;
+        }
+
+        // move the cell block
+        k++;
+    }
+
+    #undef SHIFT
+    #undef VFACTOR
+    #undef DSIZE
+
+}
+
 #endif

@@ -427,6 +427,7 @@ int main(int argc, char* argv[]) {
 
 
   // Pre proc
+  golden<float> Gold;
   omp_set_num_threads(16);
   auto start = std::chrono::steady_clock::now();
   for(int itr = 0; itr < 6*iter; itr++){
@@ -470,7 +471,7 @@ int main(int argc, char* argv[]) {
 		  for(int i = 0; i < nz; i++){
 			  for(int j = 0; j < ny; j++){
 				  int ind = i*ny*nx+j*nx;
-				  thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_d[ind], &h_u[ind], nx, 1);
+				  Gold.thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_d[ind], &h_u[ind], nx, 1);
 			  }
 		  }
 
@@ -479,7 +480,7 @@ int main(int argc, char* argv[]) {
 		  for(int j = 0; j < nz; j++){
 			  for(int i =0; i < nx; i++){
 				  int ind = i + j*nx*ny;
-				  thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_u[ind], &h_d[ind], ny, nx);
+				  Gold.thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_u[ind], &h_d[ind], ny, nx);
 			  }
 		  }
 ////
@@ -504,18 +505,10 @@ int main(int argc, char* argv[]) {
 
 
   for(int i = 0; i <  num_cus; i++){
-//	  square_error(h_ax, d_a[i], nx, ny, nz);
-//	  square_error(h_bx, d_b[i], nx, ny, nz);
-//	  square_error(h_cx, d_c[i], nx, ny, nz);
-	  square_error(h_d, d_u[i], nx, ny, nz);
-//	  square_error(h_acc, d_acc1[i], nx, ny, nz);
-//	  square_error(h_d, d_d[i], nx, ny, nz);
+	  Gold.square_error(h_d, d_u[i], nx, ny, nz);
+
   }
-//  square_error(h_acc, d_acc1, nx*ny*nz);
-//  square_error(h_u,  d_u, nx*ny*nz);
-//  square_error(h_ax, d_ax, nx*ny*nz);
-//  square_error(h_bx, d_bx, nx*ny*nz);
-//  square_error(h_cx, d_cx, nx*ny*nz);
+
 
   printf("\nComputing ADI on FPGA: %f (s) \n", k_time);
   float bandwidth = iter*2*2*sizeof(float)* nx* ny*nz/(k_time * 1000000000);

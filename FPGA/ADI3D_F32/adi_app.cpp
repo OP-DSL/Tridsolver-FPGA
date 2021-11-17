@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
   float* h_acc = (float *)aligned_alloc(4096, total_size_bytes);
 
 
-  int num_cus = 6;
+  int num_cus = 1;
   float** d1_u = (float**) aligned_alloc(4096, sizeof(float*) * num_cus);
   float** d1_du =(float**) aligned_alloc(4096, sizeof(float*) * num_cus);
   float** d1_acc1 = (float**) aligned_alloc(4096, sizeof(float*) * num_cus);
@@ -199,7 +199,8 @@ int main(int argc, char* argv[]) {
 
     // golden computation
   	// Pre proc
-  	omp_set_num_threads(16);
+  	golden<float> Gold;
+  	omp_set_num_threads(1);
     for(int itr = 0; itr < 2*iter; itr++){
   	  #pragma omp parallel for
   	  for(int bat = 0; bat < batch; bat++){
@@ -243,7 +244,7 @@ int main(int argc, char* argv[]) {
   		  for(int i = 0; i < nz; i++){
   			  for(int j = 0; j < ny; j++){
   				  int ind = bat* nx*ny*nz + i*nx*ny+j*nx;
-  				  thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_u[ind], &h_du[ind], nx, 1);
+  				  Gold.thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_u[ind], &h_du[ind], nx, 1);
   			  }
   		  }
   	   }
@@ -254,7 +255,7 @@ int main(int argc, char* argv[]) {
   		  for(int i =0; i < nx; i++){
   			  for(int j = 0; j < nz; j++){
   				  int ind =  bat* nx*ny*nz + i+j*nx*ny;
-  				  thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_du[ind], &h_u[ind], ny, nx);
+  				  Gold.thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_du[ind], &h_u[ind], ny, nx);
   			  }
   		  }
   	   }
@@ -270,7 +271,7 @@ int main(int argc, char* argv[]) {
   			for(int i =0; i < ny; i++){
   			  for(int j = 0; j < nx; j++){
   				  int ind = bat* nx*ny*nz + i*nx+j;
-  				  thomas_golden(&h_az[ind], &h_bz[ind], &h_cz[ind], &h_u[ind], &h_du[ind], nz, nx*ny);
+  				  Gold.thomas_golden(&h_az[ind], &h_bz[ind], &h_cz[ind], &h_u[ind], &h_du[ind], nz, nx*ny);
   			  }
   			}
   	   }
@@ -476,8 +477,8 @@ int main(int argc, char* argv[]) {
 
 
   for(int i = 0; i < num_cus; i++){
-	  square_error(h_du, d1_du[i], nx*ny*nz*batch);
-	  square_error(h_du, d2_du[i], nx*ny*nz*batch);
+	  Gold.square_error(h_du, d1_du[i], nx,ny,nz*batch);
+	  Gold.square_error(h_du, d2_du[i], nx,ny,nz*batch);
   }
 //  square_error(h_acc, d_acc1, nx*ny*nz);
 //  square_error(h_u,  d_u, nx*ny*nz);
