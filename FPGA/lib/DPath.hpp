@@ -26,6 +26,11 @@ template<bool FPPREC>
 static void read_plane512(const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
 		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ);
 
+template<bool FPPREC>
+static void read_Tile512(
+		const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<8> B, unsigned char dirXYZ);
+
 static void FIFO_256_512(hls::stream<uint256_dt> &stm_in, 
 	hls::stream<uint512_dt> &stm_out, int total_512);
 
@@ -73,6 +78,17 @@ static void write_plane(uint512_dt* u, hls::stream<uint256_dt> &u_stm,
 template<bool FPPREC>
 static void write_plane512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
 		ap_uint<9> M, ap_uint<9> N, ap_uint<9> L, ap_uint<10> B, unsigned char dirXYZ);
+
+template<bool FPPREC>
+static void write_Tile512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<12> B, unsigned char dirXYZ);
+
+
+template<bool FPPREC, class DType>
+static void vec_to_Dtype(hls::stream<uint256_dt> &stm_vec_in, hls::stream<DType> &stm_scl_out, int size);
+
+template<bool FPPREC, class DType>
+static void Dtype_to_vec(hls::stream<DType> &stm_scl_in, hls::stream<uint256_dt> &stm_vec_out, int size);
 
 
 // TDMA Modules
@@ -198,6 +214,7 @@ static void interleaved_row_block8(hls::stream<uint256_dt> &stm_in,
 		default: {TileX=XBlocks; TileY=N_CU; NTiles = (B*N+ADJUST)>>SHIFT; break;}
 	}
 
+
 	uint256_dt tmp_M[DMAX*N_CU*2];
 	#pragma HLS RESOURCE variable=tmp_M core=XPM_MEMORY latency=2
 
@@ -230,7 +247,7 @@ static void interleaved_row_block8(hls::stream<uint256_dt> &stm_in,
 		bool cmpW = !interleave || (i*TileY + j < B*N);
 		int indW = k*TileY+j + offsetW;
 		uint256_dt tmpW = 0;
-		if(cmpW){
+		if(cmpW && i < NTiles){
 			tmpW = stm_in.read();
 		}
 		tmp_M[indW] = tmpW;
@@ -371,7 +388,7 @@ static void undo_interleaved_row_block8(hls::stream<uint256_dt> &stm_in, hls::st
 		bool cmpW = !undo_interleave || (i*TileY + j < B*N);
 		int indW = j*TileX + k + offsetW;
 		uint256_dt tmpW = 0;
-		if(cmpW){
+		if(cmpW && i < NTiles){
 			tmpW = stm_in.read();
 		}
 		tmp_M[indW] = tmpW;
@@ -562,6 +579,55 @@ static void write_dat512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
 }
 
 
+
+
+template<bool FPPREC>
+static void read_Tile512(
+		const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<8> B, unsigned char dirXYZ){
+
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<12> TileX;
+	ap_uint<22> TileY;
+	ap_uint<8> NTiles;
+	ap_uint<8> XBlocks = (M >> SHIFT);
+	unsigned int offset;
+	switch(dirXYZ){
+		case 0: {TileX=XBlocks; TileY=B*N; NTiles = 1; break;}
+		case 1: {TileX=4; TileY=B*N; NTiles = (((XBlocks)>>2)); break;}
+		default: {TileX=XBlocks; TileY=N; NTiles = B; break;}
+	}
+
+	ap_uint<8> id = 0;
+	ap_uint<22> jd =0;
+	int total_itr = NTiles*TileY;
+	for(int itr= 0; itr < total_itr; itr++){
+		#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
+		ap_uint<8> i = id;
+		ap_uint<22> j = jd;
+
+		if(j == TileY -1){
+			jd = 0;
+			id++;
+		} else {
+			jd++;
+		}
+
+		int offset = j * XBlocks + i* TileX;
+		for(ap_uint<12>  k = 0; k < TileX; k++){
+			#pragma HLS loop_tripcount min=100 max=255 avg=255
+			#pragma HLS PIPELINE II=1
+			uint512_dt tmp_d =  d[offset+k];
+			d_stm << tmp_d;
+		}
+	}
+
+	#undef SHIFT
+
+}
+
+
 // TDMA Modules
 template<bool FPPREC>
 static void read_plane(const uint512_dt*d, hls::stream<uint256_dt> &d_stm,
@@ -637,8 +703,6 @@ static void read_plane512(const uint512_dt*d, hls::stream<uint512_dt> &d_stm,
 		case 2 : {d0 = (M>>SHIFT); d1 = L; d2 = N; off_d0 = 1; off_d1 = N*(M>>SHIFT); off_d2 = (M>>SHIFT); break;}
 		default :{d0 = (M>>SHIFT); d1 = N; d2 = L; off_d0 = 1; off_d1 = (M>>SHIFT); off_d2 = N*(M>>SHIFT); break;}
 	}
-
-
 
 	ap_uint<10> batd = 0;
 	ap_uint<10> id =0;
@@ -791,4 +855,130 @@ static void write_plane512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
 
 }
 
+template<bool FPPREC>
+static void write_Tile512(uint512_dt* u, hls::stream<uint512_dt> &u_stm,
+		ap_uint<12> M, ap_uint<12> N, ap_uint<12> B, unsigned char dirXYZ){
+
+
+	#define SHIFT (4-FPPREC)
+
+	ap_uint<12> TileX;
+	ap_uint<22> TileY;
+	ap_uint<8> NTiles;
+	ap_uint<8> XBlocks = (M >> SHIFT);
+	unsigned int offset;
+	switch(dirXYZ){
+		case 0: {TileX=XBlocks; TileY=B*N; NTiles = 1; break;}
+		case 1: {TileX=4; TileY=B*N; NTiles = (((XBlocks)>>2)); break;}
+		default: {TileX=XBlocks; TileY=N; NTiles = B; break;}
+	}
+
+	ap_uint<8> id = 0;
+	ap_uint<22> jd =0;
+	int total_itr = NTiles*TileY;
+	for(int itr= 0; itr < total_itr; itr++){
+		#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
+		ap_uint<8> i = id;
+		ap_uint<22> j = jd;
+
+		if(j == TileY -1){
+			jd = 0;
+			id++;
+		} else {
+			jd++;
+		}
+
+		int offset = j * XBlocks + i* TileX; //(j*((XBlocks*B+3)>>2)<<2);
+		for(ap_uint<12> k = 0; k < TileX; k++){
+			#pragma HLS loop_tripcount min=100 max=255 avg=255
+			#pragma HLS PIPELINE II=1
+			uint512_dt tmp;
+			tmp = u_stm.read();
+			u[offset+k] = tmp;;
+		}
+	}
+
+	#undef SHIFT
+
+}
+
+
+template<bool FPPREC, class DType>
+static void vec_to_Dtype(hls::stream<uint256_dt> &stm_vec_in, hls::stream<DType> &stm_scl_out, int size){
+
+	#define SHIFT (3-FPPREC)
+	#define VFACTOR ((1 << SHIFT))
+	#define DSIZE 	(256/VFACTOR)
+
+	for(int itr = 0; itr < size; itr++){
+		#pragma HLS PIPELINE II=8
+		uint256_dt tmp = stm_vec_in.read();
+		for(int v = 0; v < VFACTOR; v++){
+			float val = uint2FP_ript<FPPREC, DType>(tmp.range(DSIZE*(v+1)-1,DSIZE*v));
+			stm_scl_out << val;
+		}
+	}
+
+	#undef SHIFT
+	#undef VFACTOR
+	#undef DSIZE
+}
+
+
+template<bool FPPREC, class DType>
+static void Dtype_to_vec(hls::stream<DType> &stm_scl_in, hls::stream<uint256_dt> &stm_vec_out, int size){
+
+	#define SHIFT (3-FPPREC)
+	#define VFACTOR ((1 << SHIFT))
+	#define DSIZE 	(256/VFACTOR)
+
+	for(int itr = 0; itr < size; itr++){
+		#pragma HLS PIPELINE II=8
+		uint256_dt tmp;
+		for(int v = 0; v < VFACTOR; v++){
+			tmp.range(DSIZE*(v+1)-1,DSIZE*v) = FP2uint_ript(stm_scl_in.read());
+		}
+		stm_vec_out << tmp;
+	}
+
+	#undef SHIFT
+	#undef VFACTOR
+	#undef DSIZE
+}
+
+
+
+template <int MEM_SIZE>
+static void URAM_buffer(hls::stream<uint256_dt> &in_stm_1, hls::stream<uint256_dt> &out_stm_1,
+		int total_data, ap_uint<20> delay){
+
+	uint256_dt mem[MEM_SIZE];
+	#pragma HLS RESOURCE variable=mem core=XPM_MEMORY uram latency=2
+	int total_itr = total_data + delay;
+	ap_uint<20> count = 0;
+
+	for(int i = 0; i < total_itr; i++){
+		#pragma HLS loop_tripcount min=500000 max=2000000 avg=2000000
+		#pragma HLS PIPELINE II=1
+
+		if(i >= delay){
+			out_stm_1 << mem[count];
+		}
+
+		if(i < total_data){
+			mem[count] = in_stm_1.read();
+		}
+
+		if(count >= delay -1){
+			count = 0;
+		} else{
+			count++;
+		}
+	}
+}
+
+
+
 #endif
+
+

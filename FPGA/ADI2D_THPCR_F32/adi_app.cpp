@@ -40,8 +40,8 @@
 #include <chrono>
 #include "xcl2.hpp"
 #include "golden_fun.h"
-#include "trsv.hpp"
 #include "omp.h"
+//#include "trsv.hpp"
 //
 // linux timing routine
 //
@@ -87,63 +87,6 @@ int main(int argc, char* argv[]) {
   opt  = 0;
 
 
-//   PCR initial test
-//  int bSize = 2;
-//  int size_bytes = nx*sizeof(float)*bSize;
-//  float* a_pcr = (float *)aligned_alloc(4096, size_bytes);
-//  float* b_pcr = (float *)aligned_alloc(4096, size_bytes);
-//  float* c_pcr = (float *)aligned_alloc(4096, size_bytes);
-//  float* d_pcr = (float *)aligned_alloc(4096, size_bytes);
-//  float* u_pcr = (float *)aligned_alloc(4096, size_bytes);
-//
-//  for(int bat = 0; bat < bSize; bat++){
-//	  for(int i =0; i < nx; i++){
-//		  if(i == 0 || i == nx-1){
-//			  a_pcr[i+nx*bat] = 0;
-//			  b_pcr[i+nx*bat] = 1.0;
-//			  c_pcr[i+nx*bat] = 0;
-//			  d_pcr[i+nx*bat] = 3.0;
-//		  } else{
-//			  a_pcr[i+nx*bat] = i;
-//			  b_pcr[i+nx*bat] = 2*i+1;
-//			  c_pcr[i+nx*bat] = i+0.5;
-//			  d_pcr[i+nx*bat] = 5*i+1;
-//		  }
-//	  }
-//  }
-//
-//  for(int bat = 0; bat < bSize; bat++){
-//	  thomas_golden(&a_pcr[bat*nx], &b_pcr[bat*nx], &c_pcr[bat*nx], &d_pcr[bat*nx], &u_pcr[bat*nx], nx, 1);
-//  }
-//
-//  for(int bat = 0; bat < bSize; bat++){
-//	  for(int i =0; i < nx; i++){
-//		  if(i == 0 || i == nx-1){
-//			  a_pcr[i+nx*bat] = 0;
-//			  b_pcr[i+nx*bat] = 1.0;
-//			  c_pcr[i+nx*bat] = 0;
-//			  d_pcr[i+nx*bat] = 3.0;
-//		  } else{
-//			  a_pcr[i+nx*bat] = i;
-//			  b_pcr[i+nx*bat] = 2*i+1;
-//			  c_pcr[i+nx*bat] = i+0.5;
-//			  d_pcr[i+nx*bat] = 5*i+1;
-//		  }
-//	  }
-//  }
-//
-//  xf::fintech::trsvCore<float, 1024> (a_pcr, b_pcr, c_pcr, d_pcr, 256, bSize, 8);
-//  for(int i =0; i < nx*bSize; i++){
-//	  d_pcr[i] = d_pcr[i]/b_pcr[i];
-//  }
-//
-//  square_error(u_pcr, d_pcr, nx, 1, 1);
-//  exit(0);
-//
-//
-//
-
-
 
 
 
@@ -161,9 +104,9 @@ int main(int argc, char* argv[]) {
       ny = atoi ( argv[n] + 4 ); continue;
     }
     pch = strstr(argv[n], "-nz=");
-	if(pch != NULL) {
-	  nz = atoi ( argv[n] + 4 ); continue;
-	}
+  if(pch != NULL) {
+    nz = atoi ( argv[n] + 4 ); continue;
+  }
     pch = strstr(argv[n], "-iters=");
     if(pch != NULL) {
       iter = atoi ( argv[n] + 7 ); continue;
@@ -214,38 +157,38 @@ int main(int argc, char* argv[]) {
   float** d_acc2 = (float**) aligned_alloc(4096, sizeof(float*) * num_cus);
 
   for(int i = 0; i < num_cus; i++){
-	  d_u[i]  = (float *)aligned_alloc(4096, total_size_bytes);
-	  d_a[i] = (float *)aligned_alloc(4096, total_size_bytes);
-	  d_b[i] = (float *)aligned_alloc(4096, total_size_bytes);
-	  d_c[i] = (float *)aligned_alloc(4096, total_size_bytes);
-	  d_d[i] = (float *)aligned_alloc(4096, total_size_bytes);
-	  d_acc1[i] = (float *)aligned_alloc(4096, total_size_bytes);
-	  d_acc2[i] = (float *)aligned_alloc(4096, total_size_bytes);
+    d_u[i]  = (float *)aligned_alloc(4096, total_size_bytes);
+    d_a[i] = (float *)aligned_alloc(4096, total_size_bytes);
+    d_b[i] = (float *)aligned_alloc(4096, total_size_bytes);
+    d_c[i] = (float *)aligned_alloc(4096, total_size_bytes);
+    d_d[i] = (float *)aligned_alloc(4096, total_size_bytes);
+    d_acc1[i] = (float *)aligned_alloc(4096, total_size_bytes);
+    d_acc2[i] = (float *)aligned_alloc(4096, total_size_bytes);
   }
 
 
   // Initialize
 
   for(int k =0; k < nz; k++){
-  	for(int j = 0; j < ny; j++){
-  		for(int i=0; i<nx; i++) {
-  			ind = k*nx*ny+j*nx+i;
-  			if(i ==0 || i == nx-1 || j==0 || j==ny-1) {
-  			  h_u[ind] = 1.0f;
+  for(int j = 0; j < ny; j++){
+    for(int i=0; i<nx; i++) {
+      ind = k*nx*ny+j*nx+i;
+      if(i ==0 || i == nx-1 || j==0 || j==ny-1) {
+        h_u[ind] = 1.0f;
 
-  			} else {
-  			  h_u[ind] = (i+j+k)/100;
-  			}
-  			h_acc[ind] = 0.0f;
-  		}
-  	}
+      } else {
+        h_u[ind] = (i+j+k)/100;
+      }
+      h_acc[ind] = 0.0f;
     }
+  }
+  }
 
 
-  	for(int i = 0; i < num_cus; i++){
-		memcpy(d_u[i], h_u, total_size_bytes);
-		memcpy(d_acc1[i], h_acc, total_size_bytes);
-  	}
+    for(int i = 0; i < num_cus; i++){
+    memcpy(d_u[i], h_u, total_size_bytes);
+    memcpy(d_acc1[i], h_acc, total_size_bytes);
+    }
 
 
 
@@ -277,10 +220,10 @@ int main(int argc, char* argv[]) {
 
   std::vector<cl::Kernel> krnls(num_cus);
   for(int i = 0; i < num_cus; i++){
-	  std::string cu_id = std::to_string(i+1);
-	  std::string krnl_name = "TDMA_batch";
-	  std::string krnl_name_full = krnl_name + ":{" + "TDMA_batch_" + cu_id + "}";
-	  OCL_CHECK(err, krnls[i] = cl::Kernel(program, krnl_name_full.c_str(), &err));
+    std::string cu_id = std::to_string(i+1);
+    std::string krnl_name = "TDMA_batch";
+    std::string krnl_name_full = krnl_name + ":{" + "TDMA_batch_" + cu_id + "}";
+    OCL_CHECK(err, krnls[i] = cl::Kernel(program, krnl_name_full.c_str(), &err));
   }
 
   auto end_p = std::chrono::high_resolution_clock::now();
@@ -302,38 +245,27 @@ int main(int argc, char* argv[]) {
   int da_index[9] = {2, 5, 12, 15, 22,14,18,20,24};
   int db_index[9] = {3, 8, 13, 18, 23,14,18,20,24};
   int dc_index[9] = {4, 9, 14, 19, 24,14,18,20,24};
-  int dd_index[9] = {0, 2, 6,  8,  12, 14, 18, 20, 24};
-  int du_index[9] = {1, 3, 7,  9,  13, 15, 19, 21, 25};
+  int dd_index[9] = {0, 2, 4,  6,  8, 10, 12, 14, 16};
+  int du_index[9] = {1, 3, 5,  7,  9, 11, 13, 15, 17};
   int acc_index[9] ={4, 5, 10, 11, 16, 17, 22, 23, 26};
 
   for(int i = 0; i < num_cus; i++){
-	  buffer_da_ext[i].obj = d_a[i];
-	  buffer_da_ext[i].param = 0;
-	  buffer_da_ext[i].flags = bank[da_index[i]];
 
-	  buffer_db_ext[i].obj = d_b[i];
-	  buffer_db_ext[i].param = 0;
-	  buffer_db_ext[i].flags = bank[db_index[i]];
+    buffer_dd_ext[i].obj = d_d[i];
+    buffer_dd_ext[i].param = 0;
+    buffer_dd_ext[i].flags = bank[i*4];
 
-	  buffer_dc_ext[i].obj = d_c[i];
-	  buffer_dc_ext[i].param = 0;
-	  buffer_dc_ext[i].flags = bank[dc_index[i]];
+    buffer_du_ext[i].obj = d_u[i];
+    buffer_du_ext[i].param = 0;
+    buffer_du_ext[i].flags = bank[i*4+1];
 
-	  buffer_dd_ext[i].obj = d_d[i];
-	  buffer_dd_ext[i].param = 0;
-	  buffer_dd_ext[i].flags = bank[4*i];
+    buffer_acc1_ext[i].obj = d_acc1[i];
+    buffer_acc1_ext[i].param = 0;
+    buffer_acc1_ext[i].flags = bank[i*4+2];
 
-	  buffer_du_ext[i].obj = d_u[i];
-	  buffer_du_ext[i].param = 0;
-	  buffer_du_ext[i].flags = bank[4*i+1];
-
-	  buffer_acc1_ext[i].obj = d_acc1[i];
-	  buffer_acc1_ext[i].param = 0;
-	  buffer_acc1_ext[i].flags = bank[4*i+2];
-
-	  buffer_acc2_ext[i].obj = d_acc2[i];
-	  buffer_acc2_ext[i].param = 0;
-	  buffer_acc2_ext[i].flags = bank[4*i+3];
+    buffer_acc2_ext[i].obj = d_acc2[i];
+    buffer_acc2_ext[i].param = 0;
+    buffer_acc2_ext[i].flags = bank[i*4+3];
   }
 
   std::vector<cl::Buffer> buffer_da(num_cus);
@@ -345,31 +277,31 @@ int main(int argc, char* argv[]) {
   std::vector<cl::Buffer> buffer_acc2(num_cus);
 
   for(int i = 0; i < num_cus; i++){
-//	  OCL_CHECK(err, buffer_da[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_da_ext[i], &err));
-//	  OCL_CHECK(err, buffer_db[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_db_ext[i], &err));
-//	  OCL_CHECK(err, buffer_dc[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dc_ext[i], &err));
-	  OCL_CHECK(err, buffer_dd[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dd_ext[i], &err));
+//    OCL_CHECK(err, buffer_da[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_da_ext[i], &err));
+//    OCL_CHECK(err, buffer_db[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_db_ext[i], &err));
+//    OCL_CHECK(err, buffer_dc[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dc_ext[i], &err));
+    OCL_CHECK(err, buffer_dd[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_dd_ext[i], &err));
 
-	  OCL_CHECK(err, buffer_du[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX| CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_du_ext[i], &err));
-	  OCL_CHECK(err, buffer_acc1[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_acc1_ext[i], &err));
-	  OCL_CHECK(err, buffer_acc2[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_acc2_ext[i], &err));
+    OCL_CHECK(err, buffer_du[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX| CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_du_ext[i], &err));
+    OCL_CHECK(err, buffer_acc1[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_acc1_ext[i], &err));
+    OCL_CHECK(err, buffer_acc2[i] = cl::Buffer(context, CL_MEM_EXT_PTR_XILINX | CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, total_size_bytes, &buffer_acc2_ext[i], &err));
   }
 
   //Set the Kernel Arguments
   for(int i = 0; i < num_cus; i++){
-	  int narg = 0;
-//	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_da[i]));
-//	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_db[i]));
-//	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_dc[i]));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_dd[i]));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_du[i]));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_acc1[i]));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_acc2[i]));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, nx));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, ny));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, nz));
-	  OCL_CHECK(err, err = (krnls[i]).setArg(narg++, iter));
-	  OCL_CHECK(err, err = q.enqueueMigrateMemObjects({/*buffer_da[i], buffer_db[i], buffer_dc[i],*/ buffer_dd[i], buffer_du[i], buffer_acc1[i]}, 0 /* 0 means from host*/));
+    int narg = 0;
+//    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_da[i]));
+//    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_db[i]));
+//    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_dc[i]));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_dd[i]));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_du[i]));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_acc1[i]));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, buffer_acc2[i]));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, nx));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, ny));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, nz));
+    OCL_CHECK(err, err = (krnls[i]).setArg(narg++, iter));
+    OCL_CHECK(err, err = q.enqueueMigrateMemObjects({/*buffer_da[i], buffer_db[i], buffer_dc[i],*/ buffer_dd[i], buffer_du[i], buffer_acc1[i]}, 0 /* 0 means from host*/));
   }
 
 
@@ -379,32 +311,32 @@ int main(int argc, char* argv[]) {
 //  }
   q.finish();
 
-	//Launch the Kernel
+  //Launch the Kernel
   std::vector<cl::Event> event(num_cus);
   for(int i = 0; i < num_cus; i++){
-	  OCL_CHECK(err, err = q.enqueueTask(krnls[i], NULL, &event[i]));
+    OCL_CHECK(err, err = q.enqueueTask(krnls[i], NULL, &event[i]));
   }
 
   for(int i = 0; i < num_cus; i++){
-	  OCL_CHECK(err, err=event[i].wait());
+    OCL_CHECK(err, err=event[i].wait());
   }
 
     uint64_t max = 0;
-	for(int i = 0; i < num_cus; i++){
-		uint64_t endns = OCL_CHECK(err, event[i].getProfilingInfo<CL_PROFILING_COMMAND_END>(&err));
-		uint64_t startns = OCL_CHECK(err, event[i].getProfilingInfo<CL_PROFILING_COMMAND_START>(&err));
-		uint64_t nsduration = endns - startns;
-		if(max < nsduration){
-			max = nsduration;
-		}
-	}
+  for(int i = 0; i < num_cus; i++){
+    uint64_t endns = OCL_CHECK(err, event[i].getProfilingInfo<CL_PROFILING_COMMAND_END>(&err));
+    uint64_t startns = OCL_CHECK(err, event[i].getProfilingInfo<CL_PROFILING_COMMAND_START>(&err));
+    uint64_t nsduration = endns - startns;
+    if(max < nsduration){
+      max = nsduration;
+    }
+  }
 
-	double k_time = max/(1000000000.0);
+  double k_time = max/(1000000000.0);
 
-	q.finish();
-	for(int i = 0; i < num_cus; i++){
-		OCL_CHECK(err, err = q.enqueueMigrateMemObjects({/*buffer_da[i], buffer_db[i], buffer_dc[i],*/ buffer_dd[i], buffer_du[i], buffer_acc1[i], buffer_acc2[i]}, CL_MIGRATE_MEM_OBJECT_HOST));
-	}
+  q.finish();
+  for(int i = 0; i < num_cus; i++){
+    OCL_CHECK(err, err = q.enqueueMigrateMemObjects({/*buffer_da[i], buffer_db[i], buffer_dc[i],*/ buffer_dd[i], buffer_du[i], buffer_acc1[i], buffer_acc2[i]}, CL_MIGRATE_MEM_OBJECT_HOST));
+  }
     q.finish();
 
 
@@ -413,94 +345,83 @@ int main(int argc, char* argv[]) {
   elapsed_time(&timer);
 
 
+
+  golden<float> Gold;
   // Pre proc
   omp_set_num_threads(1);
-  // Pre proc
-   for(int itr = 0; itr <  2*iter; itr++){
-		#pragma omp parallel for
- 		  for(int k =0; k < nz; k++){
- 			for(int j = 0; j < ny; j++){
- 				for(int i=0; i<nx; i++) {
- 					ind = k*nx*ny+j*nx+i;
- 					float a, b, c;
- 					if(i ==0 || i == nx-1 || j==0 || j==ny-1) {
- 					  h_d[ind] = 0.0f;
- 					  a = 0.0f;
- 					  b = 1.0f;
- 					  c = 0.0f;
+  for(int itr = 0; itr <  2*iter; itr++){
 
- 					} else {
- 					  h_d[ind] = (h_u[ind-1] + h_u[ind+1] + h_u[ind-nx] + h_u[ind+nx] - h_u[ind]*6.0f);
- 					  a = -0.5f * lambda;
- 					  b =  1.0f + lambda;
- 					  c = -0.5f * lambda;
- 					}
+    #pragma omp parallel for
+      for(int k =0; k < nz; k++){
+      for(int j = 0; j < ny; j++){
+        for(int i=0; i<nx; i++) {
+          ind = k*nx*ny+j*nx+i;
+          float a, b, c;
+          if(i ==0 || i == nx-1 || j==0 || j==ny-1) {
+            h_d[ind] = 0.0f;
+            a = 0.0f;
+            b = 1.0f;
+            c = 0.0f;
 
- 					h_ax[ind] = a;
- 					h_bx[ind] = b;
- 					h_cx[ind] = c;
+          } else {
+            h_d[ind] = (h_u[ind-1] + h_u[ind+1] + h_u[ind-nx] + h_u[ind+nx] - h_u[ind]*6.0f);
+            a = -0.5f * lambda;
+            b =  1.0f + lambda;
+            c = -0.5f * lambda;
+          }
 
- 					h_ay[ind] = a;
- 					h_by[ind] = b;
- 					h_cy[ind] = c;
+          h_ax[ind] = a;
+          h_bx[ind] = b;
+          h_cx[ind] = c;
 
- 					h_az[ind] = a;
- 					h_bz[ind] = b;
- 					h_cz[ind] = c;
- 				}
- 			}
- 		  }
+          h_ay[ind] = a;
+          h_by[ind] = b;
+          h_cy[ind] = c;
 
- 		//  solving on x-dimesnion
-		#pragma omp parallel for
- 		  for(int i = 0; i < nz; i++){
- 			  for(int j = 0; j < ny; j++){
- 				  int ind = j*nx+i*nx*ny;
- 				  thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_d[ind], &h_u[ind], nx, 1);
- 			  }
- 		  }
+          h_az[ind] = a;
+          h_bz[ind] = b;
+          h_cz[ind] = c;
+        }
+      }
+      }
 
- ////		  // solving on y-direction
-		#pragma omp parallel for
- 		  for(int i =0; i < nx; i++){
- 			  for(int j = 0; j < nz; j++){
- 				  int ind = i + j*nx*ny;
- 				  thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_u[ind], &h_d[ind], ny, nx);
- 			  }
- 		  }
- //
-		#pragma omp parallel for
- 		 for(int k =0; k < nz; k++){
- 			for(int j = 0; j < ny; j++){
- 				for(int i=0; i<nx; i++) {
- 					ind = k*nx*ny+j*nx+i;
- 					h_acc[ind] = h_acc[ind] + h_d[ind];
- 					h_u[ind] = h_acc[ind];
- 				}
- 			}
- 		}
- //
- //
+    //  solving on x-dimesnion
+    #pragma omp parallel for
+      for(int i = 0; i < nz; i++){
+        for(int j = 0; j < ny; j++){
+          int ind = j*nx+i*nx*ny;
+          Gold.thomas_golden(&h_ax[ind], &h_bx[ind], &h_cx[ind], &h_d[ind], &h_u[ind], nx, 1);
+        }
+      }
 
-   }
+////      // solving on y-direction
+     #pragma omp parallel for
+      for(int i =0; i < nx; i++){
+        for(int j = 0; j < nz; j++){
+          int ind = i + j*nx*ny;
+          Gold.thomas_golden(&h_ay[ind], &h_by[ind], &h_cy[ind], &h_u[ind], &h_d[ind], ny, nx);
+        }
+      }
+//
+    #pragma omp parallel for
+     for(int k =0; k < nz; k++){
+      for(int j = 0; j < ny; j++){
+        for(int i=0; i<nx; i++) {
+          ind = k*nx*ny+j*nx+i;
+          h_acc[ind] = h_acc[ind] + h_d[ind];
+          h_u[ind] = h_acc[ind];
+        }
+      }
+    }
+//
+//
 
-
-
-
+  }
 
   for(int i = 0; i < num_cus; i++){
-//	  square_error(h_ax, d_a[i], nx, ny, nz);
-//	  square_error(h_bx, d_b[i], nx, ny, nz);
-//	  square_error(h_cx, d_c[i], nx, ny, nz);
-	  square_error(h_d, d_u[i], nx, ny, nz);
-//	  square_error(h_acc, d_acc1[i], nx, ny, nz);
-//	  square_error(h_d, d_d[i], nx, ny, nz);
+    Gold.square_error(h_d, d_u[i], nx, ny, nz);
   }
-//  square_error(h_acc, d_acc1, nx*ny*nz);
-//  square_error(h_u,  d_u, nx*ny*nz);
-//  square_error(h_ax, d_ax, nx*ny*nz);
-//  square_error(h_bx, d_bx, nx*ny*nz);
-//  square_error(h_cx, d_cx, nx*ny*nz);
+
 
   printf("\nComputing ADI on FPGA: %f (s) \n", k_time);
   float bandwidth = iter* 4*2*sizeof(float)* nx* ny*nz/(k_time * 1000000000);
@@ -522,13 +443,13 @@ int main(int argc, char* argv[]) {
   free(h_cz);
 
   for(int i = 0; i < num_cus; i++){
-	  free(d_a[i]);
-	  free(d_b[i]);
-	  free(d_c[i]);
-	  free(d_d[i]);
-	  free(d_u[i]);
-	  free(d_acc1[i]);
-	  free(d_acc2[i]);
+    free(d_a[i]);
+    free(d_b[i]);
+    free(d_c[i]);
+    free(d_d[i]);
+    free(d_u[i]);
+    free(d_acc1[i]);
+    free(d_acc2[i]);
   }
 
   free(d_u);
