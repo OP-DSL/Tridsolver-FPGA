@@ -6,7 +6,6 @@
 #include "stencils.hpp"
 #include "DPath.hpp"
 #include "TiledThomas.hpp"
-#include "pre_proc.cpp"
 #include "trsv.hpp"
 
 
@@ -60,6 +59,9 @@ static void TDMA(const uint512_dt* d, uint512_dt* u,
 	#pragma HLS STREAM variable = STAGE_2B_scl depth = 2
 	#pragma HLS STREAM variable = STAGE_4_scl depth = 2
 	#pragma HLS STREAM variable = STAGE_6_scl depth = 2
+
+	const int VEC_FACTOR = 8;
+	const int D_SIZE = 256/VEC_FACTOR;
 
 
 	hls::stream<float> pcr_a[VEC_FACTOR];

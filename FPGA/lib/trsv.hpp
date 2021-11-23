@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <hls_stream.h>
 #include <ap_int.h>
-#include "pre_proc.h"
 #ifndef _XSOLVER_CORE_TRSV_
 #define _XSOLVER_CORE_TRSV_
 
