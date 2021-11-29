@@ -34,12 +34,17 @@ The library has been used to implement the 2D and 3D Heat diffusion application 
 
 
 #### Application Implementations  
-Vitis data-flow programming is used for implmenting applications targetting Xilinx Alveo U280 and U50 devices. A Makefile will be added in the future to support commandline based implementation.  
+Makefile based FPGA application implementation is supported. Optionally user can implement Application using Vitis GUI. In that case, user need to point the config file and set number of kernels. Here we note that separate config files are provided for U50 and U280 devices. 
 
-Kernel files are named as `*_kernel.cpp`.
+Following are the steps for Makefile based flow, 
 
-Each application folder contains configuration files named as `\*.cfg` and necessary placement and memory port constraints are provided there. 
-You can set constriants in vitis GUI flow as `--config \*.cfg` in the GUI command box of the binray container and kernels.
+`cd <application directory>`
+
+`set the target config file(_u50.cfg or u280.cfg) in the Makefile`
+
+` make build TARGET=<sw_emu/hw_emu/hw> PLATFORM=<FPGA platform>`
+
+` make run TARGET=<sw_emu/hw_emu/hw> PLATFORM=<FPGA platform>`
 
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
 The performance of Tridsolver-FPGA library on Xilinx FPGAs has been compared to performance of the same applications on Nvida V100 GPUs (using the [Tridsolver GPU library by László et al.](https://github.com/OP-DSL/tridsolver) and NVIDIA's cuSPARSE). The following results are for the 2D and 3D Heat Diffusion Application implemented with the ADI technique and a Stochastic Local Volatility (SLV) model application, implemented with a Hundsdorfer-Verwer (HV) method for time integration. 
