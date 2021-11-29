@@ -24,7 +24,7 @@ static void thomas_interleave(hls::stream<uint256_dt> &d_stm, hls::stream<uint25
 	ap_uint<12> jd1 = 0;
 	ap_uint<16> Bp1 = B+1;
 
-	int total_itr =register_it<int> (Bp1*NBLK*d0);
+	int total_itr =register_it<int> (B*NBLK*d0 + NBLK*d0);
 	loop_read: for(int itr= 0; itr < total_itr; itr++){
 			#pragma HLS PIPELINE II=1
 			#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
@@ -96,7 +96,7 @@ static void thomas_forward(hls::stream<uint256_dt> &d_fw_stm, hls::stream<uint25
 	ap_uint<7>  kd2 = 0;
 
 	ap_uint<16> Bp1 = B+1;
-	int total_itr =register_it<int> (Bp1*NBLK*d0);
+	int total_itr =register_it<int> (B*NBLK*d0 + NBLK*d0);
 
 	uint256_dt window_b2[NBLK], window_c2[NBLK], window_d2[NBLK];
 	loop_fw: for(int itr= 0; itr < total_itr; itr++){
@@ -216,7 +216,7 @@ static void thomas_backward(hls::stream<uint256_dt> &c2_fw_stm, hls::stream<uint
 	ap_uint<7>  kd3 = 0;
 
 	ap_uint<16> Bp1 = B+1;
-	int total_itr =register_it<int> (Bp1*NBLK*d0);
+	int total_itr =register_it<int> (B*NBLK*d0 + NBLK*d0);
 
 	loop_bw: for(int itr= 0; itr < total_itr; itr++){
 		#pragma HLS PIPELINE II=1
