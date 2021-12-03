@@ -46,6 +46,12 @@ Following are the steps for Makefile based flow,
 
 ` make run TARGET=<sw_emu/hw_emu/hw> PLATFORM=<FPGA platform>`
 
+please make sure XRT setup.sh and Vitis settings64.sh scripts are sourced before using Makefile commands. E.g 
+
+`source /disk1/Xilinx/Vitis/2019.2/settings64.sh`
+
+`source /opt/xilinx/xrt/setup.sh`
+
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
 The performance of Tridsolver-FPGA library on Xilinx FPGAs has been compared to performance of the same applications on Nvida V100 GPUs (using the [Tridsolver GPU library by László et al.](https://github.com/OP-DSL/tridsolver) and NVIDIA's cuSPARSE). The following results are for the 2D and 3D Heat Diffusion Application implemented with the ADI technique and a Stochastic Local Volatility (SLV) model application, implemented with a Hundsdorfer-Verwer (HV) method for time integration. 
 
