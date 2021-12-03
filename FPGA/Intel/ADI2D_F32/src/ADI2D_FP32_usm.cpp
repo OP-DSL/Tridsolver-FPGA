@@ -86,10 +86,10 @@ static auto exception_handler = [](sycl::exception_list e_list) {
 
 
 template<int VFACTOR>
-void stencil_read(queue &q, const float* in, ac_int<12,true> nx, ac_int<12,true> ny, ac_int<12,true> nz, ac_int<12,true> batch){
+void read_dat(queue &q, const float* in, int size){
       event e1 = q.submit([&](handler &h) {
 
-      int total_itr = ((nx*ny)*(nz*batch))/(VFACTOR*2);
+      int total_itr = (size)/(VFACTOR*2);
       const int VFACTOR2 = VFACTOR*2;
       h.single_task<class producer>([=] () [[intel::kernel_args_restrict]]{
 
@@ -108,10 +108,10 @@ void stencil_read(queue &q, const float* in, ac_int<12,true> nx, ac_int<12,true>
 }
 
 template<int VFACTOR>
-void PipeConvert_512_128(queue &q, ac_int<12,true> nx, ac_int<12,true> ny, ac_int<12,true> nz, ac_int<12,true> batch){
+void PipeConvert_512_128(queue &q, int size){
       event e1 = q.submit([&](handler &h) {
 
-      int total_itr = ((nx*ny)*(nz*batch))/(VFACTOR);
+      int total_itr = size/(VFACTOR);
       h.single_task<class PipeConvert_512_256>([=] () [[intel::kernel_args_restrict]]{
         struct dPath16 data16;
         [[intel::initiation_interval(1)]]
@@ -277,11 +277,10 @@ void stencil_compute(queue &q,  ac_int<12,true> nx, ac_int<12,true> ny, ac_int<1
 
 
 template <int idx, int VFACTOR>
-void PipeConvert_128_512(queue &q, ac_int<12,true> nx, ac_int<12,true> ny, ac_int<12,true> nz,
-                  ac_int<12,true> batch){
+void PipeConvert_128_512(queue &q, int size){
     event e3 = q.submit([&](handler &h) {
     h.single_task<class pipeConvert_256_512>([=] () [[intel::kernel_args_restrict]]{
-      int total_itr = ((nx*ny)*(nz*batch))/(VFACTOR);
+      int total_itr = size/(VFACTOR);
       struct dPath16 data16;
       [[intel::initiation_interval(1)]]
       for(int i = 0; i < total_itr; i++){
@@ -306,12 +305,11 @@ void PipeConvert_128_512(queue &q, ac_int<12,true> nx, ac_int<12,true> ny, ac_in
 
 
 template <int VFACTOR>
-void stencil_write(queue &q, float* out, ac_int<12,true> nx, ac_int<12,true> ny, ac_int<12,true> nz,
-                  ac_int<12,true> batch, double &kernel_time){
+void write_dat(queue &q, float* out, int size, double &kernel_time){
     event e3 = q.submit([&](handler &h) {
     // accessor out(out_buf, h, write_only);
     h.single_task<class stencil_write>([=] () [[intel::kernel_args_restrict]]{
-      int total_itr = ((nx*ny)*(nz*batch))/(VFACTOR*2);
+      int total_itr = (size)/(VFACTOR*2);
       const int VFACTOR2 = VFACTOR*2;
       [[intel::initiation_interval(1)]]
       for(int i = 0; i < total_itr; i++){
@@ -369,26 +367,26 @@ void stencil_comp(queue &q, float* input, float* output, int n_iter, int nx, int
   std::cout << "starting writing to the pipe\n" << std::endl;
   dpc_common::TimeInterval exe_time;
 
-
+    int size = nx*ny*nz*batch;
     for(int itr = 0; itr < n_iter; itr++){
 
       // reading from memory
-      stencil_read<8>(q, input, nx, ny, nz, batch);
-      PipeConvert_512_128<4>(q,nx, ny, nz, batch);
+      read_dat<8>(q, input, size);
+      PipeConvert_512_128<4>(q, size);
       loop<UFACTOR, UFACTOR>::instantiate(q, nx, ny, nz, batch);
-      PipeConvert_128_512<UFACTOR, 4>(q,nx, ny, nz, batch);
+      PipeConvert_128_512<UFACTOR, 4>(q, size);
       //write back to memory
-      stencil_write<8>(q, output, nx, ny, nz, batch, kernel_time);
+      write_dat<8>(q, output, size, kernel_time);
       q.wait();
 
       
       // reading from memory
-      stencil_read<8>(q, output, nx, ny, nz, batch);
-      PipeConvert_512_128<4>(q,nx, ny, nz, batch);
+      read_dat<8>(q, output, size);
+      PipeConvert_512_128<4>(q, size);
       loop<UFACTOR, UFACTOR>::instantiate(q, nx, ny, nz, batch);
-      PipeConvert_128_512<UFACTOR, 4>(q,nx, ny, nz, batch);
+      PipeConvert_128_512<UFACTOR, 4>(q, size);
       //write back to memory
-      stencil_write<8>(q, input, nx, ny, nz, batch, kernel_time);
+      write_dat<8>(q, input, size, kernel_time);
       
 
       q.wait();
