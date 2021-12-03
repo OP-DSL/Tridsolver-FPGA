@@ -404,8 +404,51 @@ void stencil_comp(queue &q, float* input, float* output, int n_iter, int nx, int
 //************************************
 // Initialize the vector from 0 to vector_size - 1
 //************************************
-void InitializeVector(float *a, int size) {
-  for (size_t i = 0; i < size; i++) a[i] = i;
+
+
+void InitializeCoeffs(float* a, float* b, float*c , float* d, int nx, int ny){
+  for(int i = 0; i < ny; i++){
+    for(int j = 0; j < nx; j++){
+      int index = i*nx+j;
+      if(j == nx-1 || j == 0){
+        a[index] = 0.0f;
+        b[index] = 1.0f;
+        c[index] = 0.0f;
+        d[index] = index*0.1+5;
+      } else {
+        a[index] = -0.5f;
+        b[index] = 2.0f;
+        c[index] = -0.5f;
+        d[index] = index*0.1+5;
+      }
+    }
+  }
+}
+
+//************************************
+// Thomas Golden Computation 
+//************************************
+
+template <class DType>
+void thomas_golden(DType* __restrict a, DType* __restrict b, DType* __restrict c,
+    DType* __restrict d, DType* __restrict u, int N, int stride){
+
+    for(int i = 1; i < N; i++){
+      int ind = stride*i;
+      DType w = a[ind] / b[ind-stride];
+      b[ind] = b[ind] - w * c[ind-stride];
+      d[ind] = d[ind] - w * d[ind-stride];
+    }
+
+    int ind = (N-1)*stride;
+    u[ind] = d[ind] / b[ind];
+
+    for(int i =N-2; i >=0; i--){
+      int ind = i*stride;
+      u[ind] = (d[ind] - c[ind] * u[ind+stride]) / b[ind];
+
+    }
+
 }
 
 //************************************
@@ -445,89 +488,66 @@ int main(int argc, char* argv[]) {
   try {
     queue q(d_selector,  dpc_common::exception_handler, property::queue::enable_profiling{});
 
-    float* in_vec= malloc_shared<float>(nx*ny*nz*batch, q);
-    float* out_parallel = malloc_shared<float>(nx*ny*nz*batch, q);
-    float* in_vec_h = malloc_shared<float>(nx*ny*nz*batch, q);
-    float* out_sequential = malloc_shared<float>(nx*ny*nz*batch, q);
+    float* a_h = malloc_host<float>(nx*ny, q);
+    float* b_h = malloc_host<float>(nx*ny, q);
+    float* c_h = malloc_host<float>(nx*ny, q);
+    float* d_h = malloc_host<float>(nx*ny, q);
+    float* u_h = malloc_host<float>(nx*ny, q);
 
-    InitializeVector(in_vec, nx*ny*nz*batch);
-    InitializeVector(in_vec_h,nx*ny*nz*batch);
+
+    float* a_d = malloc_shared<float>(nx*ny, q);
+    float* b_d = malloc_shared<float>(nx*ny, q);
+    float* c_d = malloc_shared<float>(nx*ny, q);
+    float* d_d = malloc_shared<float>(nx*ny, q);
+    float* u_d = malloc_shared<float>(nx*ny, q);
+
+
+    InitializeCoeffs(a_h, b_h, c_h, d_h, nx, ny);
+    InitializeCoeffs(a_d, b_d, c_d, d_d, nx, ny);
     // queue q2(d_selector,  dpc_common::exception_handler);
 
 
     // Print out the device information used for the kernel code.
     std::cout << "Running on device: "
               << q.get_device().get_info<info::device::name>() << "\n";
-    std::cout << "Vector size: " << nx*ny*nz*batch << "\n";
+
 
     // Vector addition in DPC++
     
-    stencil_comp(q, in_vec, out_parallel, n_iter, nx, ny, nz, batch);
+    // stencil_comp(q, in_vec, out_parallel, n_iter, nx, ny, nz, batch);
 
-      // Compute the sum of two vectors in sequential for validation.
-
-    for(int itr= 0; itr < UFACTOR*n_iter; itr++){
-      for(int bat = 0; bat < batch; bat++){
-        for(int k = 0; k < nz; k++){
-          for(int j = 0; j < ny; j++){
-            for(int i = 0; i < nx; i++){
-              int ind = k*nx*ny + j*nx + i;
-              int offset = bat*nx*ny*nz;
-              if(i > 0 && i < nx -1 && j > 0 && j < ny -1 && k > 0 && k < nz-1){
-                out_sequential[offset+ind] =   in_vec_h[offset+ind-nx*ny]*(0.01f) + in_vec_h[offset+ind+nx*ny]*0.02f + in_vec_h[offset+ind-nx]*(0.03f) + \
-                                                  in_vec_h[offset+ind+nx]*(0.04f) + in_vec_h[offset+ind-1]*(0.05f) + in_vec_h[offset+ind+1]*(0.06f) \
-                                                  + in_vec_h[offset+ind]*(0.79f);
-              } else {
-                out_sequential[offset+ind] = in_vec_h[offset+ind];
-              }
-            }
-          }
-        }
-      }
-
-      for(int bat = 0; bat < batch; bat++){
-        for(int k = 0; k < nz; k++){
-          for(int j = 0; j < ny; j++){
-            for(int i = 0; i < nx; i++){
-              int ind = k*nx*ny + j*nx + i;
-              int offset = bat*nx*ny*nz;
-              if(i > 0 && i < nx -1 && j > 0 && j < ny -1 && k > 0 && k < nz-1){
-                in_vec_h[offset+ind] =  out_sequential[offset+ind-nx*ny]*(0.01f) + out_sequential[offset+ind+nx*ny]*0.02f + out_sequential[offset+ind-nx]*(0.03f) + \
-                                           out_sequential[offset+ind+nx]*(0.04f) + out_sequential[offset+ind-1]*(0.05f) + out_sequential[offset+ind+1]*(0.06f) \
-                                           + out_sequential[offset+ind]*(0.79f);
-
-              } else {
-                in_vec_h[offset+ind] = out_sequential[offset+ind];
-              }
-            }
-          }
-        }
-      }
-
+    // Compute the sum of two vectors in sequential for validation.
+    for(int i = 0; i < ny; i++){
+      thomas_golden<float>(&a_h[i*nx], &b_h[i*nx], &c_h[i*nx], &d_h[i*nx], &u_h[i*nx], nx, 1);
     }
 
 
 
-      // Verify that the two vectors are equal. 
-      for(int bat = 0; bat < batch; bat++){
-        for(int k = 0; k < nz; k++){ 
-          for(int j = 0; j < ny; j++){
-            for(int i = 0; i < nx; i++){
-              int ind = bat*nx*ny*nz + k*nx*ny + j*nx + i;
-              float chk = fabs((in_vec_h[ind] - in_vec[ind])/(in_vec_h[ind]));
-              if(chk > 0.00001 && fabs(in_vec_h[ind]) > 0.00001){
-                std::cout << "j,i, k, index: " << j  << " " << i << " " << k << " " << ind << " " << in_vec_h[ind] << " " << in_vec[ind] <<  std::endl;
-                // return -1;
-              }
-            }
-          }
+
+    // Verify that the two vectors are equal. 
+    for(int i = 0; i < ny; i++){
+      for(int j = 0; j < nx; j++){
+        int ind = i*nx + j;
+        float chk = fabs((u_h[ind] - u_d[ind])/(u_h[ind]));
+        if(chk > 0.00001 && fabs(u_h[ind]) > 0.00001){
+          std::cout << "i,j: " << i  << " " << j << " " << u_h[ind] << " " << u_d[ind] <<  std::endl;
+          // return -1;
         }
       }
+    }
+ 
 
-      free(in_vec, q);
-      free(out_parallel, q);
-      free(in_vec_h, q);
-      free(out_sequential, q);
+      free(a_h, q);
+      free(b_h, q);
+      free(c_h, q);
+      free(d_h, q);
+      free(u_h, q);
+
+      free(a_d, q);
+      free(b_d, q);
+      free(c_d, q);
+      free(d_d, q);
+      free(u_d, q);
 
   } catch (exception const &e) {
     std::cout << "An exception is caught for vector add.\n";
