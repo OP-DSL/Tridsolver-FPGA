@@ -2,9 +2,10 @@
 #ifndef __PRE_PROC_H__
 #define __PRE_PROC_H__
 
-#define N_MAX 128
-#define DIM_MAX 128
-#define RN_MAX 256
+#define N_MAX 4096
+#define DIM_MAX 1024
+#define RN_MAX 512
+#define RN_MAX_scl 1024
 #define MAX_Sys 32
 #define N_BLK 32
 #define D_SIZE 32
@@ -82,11 +83,9 @@ static void write_d(uint512_dt* d, hls::stream<uint256_dt> &d_stm,
 		ap_uint<12> M, ap_uint<12> N, ap_uint<12> B);
 
 static void process_grid( hls::stream<uint256_dt> &rd_buffer, hls::stream<uint256_dt> &wr_buffer,
-		hls::stream<uint256_dt> &acc_in,  hls::stream<uint256_dt> &acc_out, struct data_G data_g, bool dnt_acc_updt);
+		hls::stream<uint256_dt> &acc_in,  hls::stream<uint256_dt> &acc_out, struct data_G data_g, bool dnt_acc_updt, bool skip_process);
 
-static void pre_process(hls::stream<uint256_dt> &rd_buffer, hls::stream<uint256_dt> &wr_buffer,
-		hls::stream<uint256_dt> &acc_in,  hls::stream<uint256_dt> &acc_out,
-		int M, int N, int B, bool dnt_acc_updt);
-
+static int pre_process(const uint512_dt* u,  uint512_dt* d, const uint512_dt* acc_1, uint512_dt* acc_2,
+				   int M, int N, int B, bool dnt_acc_updt);
 
 #endif
