@@ -22,7 +22,7 @@ event interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_
 		#define DSIZE 	(256/VFACTOR)
 		#define ADJUST (VFACTOR-1)
 
-
+    	[[intel::disable_loop_pipelining]]
 		for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			ac_int<13,true> TileX, TileY;
@@ -44,6 +44,8 @@ event interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_
 			ac_int<25,true> id = 0;
 			ac_int<13,true> jd =0, kd = 0;
 			int total_itr = NTilesp1*TileX*TileY;
+
+			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<25,true> i = id;
@@ -104,7 +106,7 @@ event row2col(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,
 		#define DSIZE 	(256/VFACTOR)
 		#define ADJUST (VFACTOR-1)
 
-
+    	[[intel::disable_loop_pipelining]]
 		for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 
@@ -124,6 +126,8 @@ event row2col(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,
 			ac_int<19,true> id = 0;
 			ac_int<13,true> jd =0, kd = 0;
 			int total_itr = NTilesp1*TileX*TileY;
+
+			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<19,true> i = id;
@@ -183,6 +187,7 @@ event undo_interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N
 		#define DSIZE 	(256/VFACTOR)
 		#define ADJUST (VFACTOR-1)
 
+    	[[intel::disable_loop_pipelining]]
 		for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			ac_int<13,true> TileX, TileY;
@@ -202,6 +207,8 @@ event undo_interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N
 			ac_int<25,true> id = 0;
 			ac_int<13,true> jd =0, kd = 0;
 			int total_itr = NTilesp1*TileX*TileY;
+
+			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<25, true> i = id;
@@ -263,6 +270,7 @@ event col2row(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,
 		#define DSIZE 	(256/VFACTOR)
 		#define ADJUST (VFACTOR-1)
 
+    	[[intel::disable_loop_pipelining]]
 		for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			ac_int<13,true> TileX, TileY;
@@ -282,6 +290,8 @@ event col2row(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,
 			ac_int<19,true> id = 0;
 			ac_int<13,true> jd =0, kd = 0;
 			int total_itr = NTilesp1*TileX*TileY;
+
+			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<19,true> i = id;
@@ -341,6 +351,7 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 		#define DSIZE 	(256/VFACTOR)
 		#define ADJUST (VFACTOR-1)
 
+    	[[intel::disable_loop_pipelining]]
     	for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			const int l_interval = VFACTOR;
@@ -357,7 +368,7 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 			}
 
 
-			loop_read: for(int itr=0; itr < NTiles; itr++){
+			for(int itr=0; itr < NTiles; itr++){
 				struct dPath tmp[VFACTOR], outR;
 				for(int i = 0; i < VFACTOR; i++){
 					tmp[i] = pipeS::PipeAt<Pidx1>::read();
@@ -365,6 +376,7 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 				}
 
 				if(transpose){
+					[[intel::initiation_interval(1)]]
 					for(int i = 0; i < VFACTOR; i++){
 						outR.data[0] = tmp[0].data[i];
 						outR.data[1] = tmp[1].data[i];
@@ -380,6 +392,7 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 					}
 
 				} else {
+					[[intel::initiation_interval(1)]]
 					for(int i = 0; i < VFACTOR; i++){
 							pipeS::PipeAt<Pidx2>::write(tmp[i]);
 					}
@@ -402,11 +415,10 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 }
 
 
-// template <int MEM_SIZE>
+// template <int MEM_SIZE, int>
 // static void URAM_buffer(queue &q, int total_data, ap_uint<20> delay){
 
-// 	uint256_dt mem[MEM_SIZE];
-// 	#pragma HLS RESOURCE variable=mem core=XPM_MEMORY uram latency=2
+// 	struct dPath mem[MEM_SIZE];
 // 	int total_itr = total_data + delay;
 // 	ap_uint<20> count = 0;
 

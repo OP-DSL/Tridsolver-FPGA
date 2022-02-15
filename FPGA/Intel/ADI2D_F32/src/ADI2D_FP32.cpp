@@ -73,6 +73,7 @@ event stencil_read_write(queue &q, buffer<struct dPath16, 1> &in_buf, buffer<str
 
       h.single_task<class stencil_read_write_id<idx1>>([=] () [[intel::kernel_args_restrict]]{
 
+      [[intel::disable_loop_pipelining]]
       for(ac_int<12,true> itr = 0; itr < n_iter; itr++){
 
         accessor ptrR = ((itr & 1) == 0) ? in : out;
@@ -105,7 +106,7 @@ void PipeConvert_512_256(queue &q, int total_itr, ac_int<12,true> n_iter){
       event e1 = q.submit([&](handler &h) {
 
       ac_int<40,true> count = total_itr*n_iter;
-      h.single_task<class PipeConvert_512_256_id<idx1>>([=] () [[intel::kernel_args_restrict]]{
+      h.single_task<class PipeConvert_512_256_id<idx2>>([=] () [[intel::kernel_args_restrict]]{
         struct dPath16 data16;
         [[intel::initiation_interval(1)]]
         for(ac_int<40,true> i = 0; i < count; i++){
@@ -129,95 +130,95 @@ void PipeConvert_512_256(queue &q, int total_itr, ac_int<12,true> n_iter){
     });
 }
 
-template <size_t idx>  struct struct_idX;
-template<int idx, int IdX, int DMAX, int VFACTOR>
-void stencil_compute(queue &q, ac_int<14,true>  nx, ac_int<14,true>  ny, ac_int<14,true>  nz, int total_itr, ac_int<12,true> n_iter){
-    event e2 = q.submit([&](handler &h) {
-    std::string instance_name="compute"+std::to_string(idx);
-    h.single_task<class struct_idX<IdX>>([=] () [[intel::kernel_args_restrict]]{
+// template <size_t idx>  struct struct_idX;
+// template<int idx, int IdX, int DMAX, int VFACTOR>
+// void stencil_compute(queue &q, ac_int<14,true>  nx, ac_int<14,true>  ny, ac_int<14,true>  nz, int total_itr, ac_int<12,true> n_iter){
+//     event e2 = q.submit([&](handler &h) {
+//     std::string instance_name="compute"+std::to_string(idx);
+//     h.single_task<class struct_idX<IdX>>([=] () [[intel::kernel_args_restrict]]{
     
-    // int total_itr = ((nx/VFACTOR)*(ny*nz+1));
-    struct dPath s_1_2, s_2_1, s_1_1, s_0_1, s_1_0;
+//     // int total_itr = ((nx/VFACTOR)*(ny*nz+1));
+//     struct dPath s_1_2, s_2_1, s_1_1, s_0_1, s_1_0;
 
-    const int max_dpethl = DMAX/VFACTOR;
+//     const int max_dpethl = DMAX/VFACTOR;
 
-    struct dPath wind1[max_dpethl];
-    struct dPath wind2[max_dpethl];
-
-
-
-    for(ac_int<12,true> u_itr = 0; u_itr < n_iter; u_itr++){
-      struct dPath vec_wr;
-      [[intel::fpga_register]] float mid_row[10];
-      ac_int<14,true>  i_ld = 0;
-      short id = 0, jd = 0, kd = 0;
-      unsigned short rEnd = (nx/VFACTOR)-1;
-      [[intel::initiation_interval(1)]]
-      for(int itr = 0; itr < total_itr; itr++){
-        ac_int<14,true>  i = id; 
-        ac_int<14,true>  j = jd; 
-        ac_int<14,true>  k = kd;
-        ac_int<14,true>  i_l = i_ld;
-
-        if(i == rEnd){
-          id = 0;
-        } else {
-          id++;
-        }
-
-        if(i == rEnd && j == ny){
-          jd = 1;
-        } else if(i == rEnd){
-          jd++;
-        }
-
-        if(i == rEnd && j == ny){
-          kd++;
-        }
+//     struct dPath wind1[max_dpethl];
+//     struct dPath wind2[max_dpethl];
 
 
 
-        s_1_0 = wind2[i_l];
+//     for(ac_int<12,true> u_itr = 0; u_itr < n_iter; u_itr++){
+//       struct dPath vec_wr;
+//       [[intel::fpga_register]] float mid_row[10];
+//       ac_int<14,true>  i_ld = 0;
+//       short id = 0, jd = 0, kd = 0;
+//       unsigned short rEnd = (nx/VFACTOR)-1;
+//       [[intel::initiation_interval(1)]]
+//       for(int itr = 0; itr < total_itr; itr++){
+//         ac_int<14,true>  i = id; 
+//         ac_int<14,true>  j = jd; 
+//         ac_int<14,true>  k = kd;
+//         ac_int<14,true>  i_l = i_ld;
 
-        s_0_1 = s_1_1;
-        wind2[i_l] = s_0_1;
+//         if(i == rEnd){
+//           id = 0;
+//         } else {
+//           id++;
+//         }
 
-        s_1_1 = s_2_1;
-        s_2_1 = wind1[i_l];
+//         if(i == rEnd && j == ny){
+//           jd = 1;
+//         } else if(i == rEnd){
+//           jd++;
+//         }
 
-        if(itr < (nx/VFACTOR)*ny*nz){
-          s_1_2 = pipeS::PipeAt<idx>::read();
-        }
+//         if(i == rEnd && j == ny){
+//           kd++;
+//         }
 
-        wind1[i_l] = s_1_2;
 
-        if(i_l >= nx/VFACTOR -2){
-          i_ld = 0;
-        } else {
-          i_ld++;
-        }
 
-        #pragma unroll VFACTOR
-        for(int v = 0; v < VFACTOR; v++){
-          mid_row[v+1] = s_1_1.data[v]; 
-        }
-        mid_row[0] = s_0_1.data[VFACTOR-1];
-        mid_row[VFACTOR+1] = s_2_1.data[0];
+//         s_1_0 = wind2[i_l];
 
-        #pragma unroll VFACTOR
-        for(int v = 0; v < VFACTOR; v++){
-          int i_ind = i *VFACTOR + v;
-          float val =  (mid_row[v] + mid_row[v+2] + s_1_0.data[v] + s_1_2.data[v])/8 + (mid_row[v+1])/2;
-          vec_wr.data[v] = (i_ind > 0 && i_ind < nx-1 && j > 1 && j < ny ) ? val : mid_row[v+1];
-        }
-        if(itr >= (nx/VFACTOR)){
-          pipeS::PipeAt<idx+1>::write(vec_wr);
-        }
-      }
-    }
-  });
-  });
-}
+//         s_0_1 = s_1_1;
+//         wind2[i_l] = s_0_1;
+
+//         s_1_1 = s_2_1;
+//         s_2_1 = wind1[i_l];
+
+//         if(itr < (nx/VFACTOR)*ny*nz){
+//           s_1_2 = pipeS::PipeAt<idx>::read();
+//         }
+
+//         wind1[i_l] = s_1_2;
+
+//         if(i_l >= nx/VFACTOR -2){
+//           i_ld = 0;
+//         } else {
+//           i_ld++;
+//         }
+
+//         #pragma unroll VFACTOR
+//         for(int v = 0; v < VFACTOR; v++){
+//           mid_row[v+1] = s_1_1.data[v]; 
+//         }
+//         mid_row[0] = s_0_1.data[VFACTOR-1];
+//         mid_row[VFACTOR+1] = s_2_1.data[0];
+
+//         #pragma unroll VFACTOR
+//         for(int v = 0; v < VFACTOR; v++){
+//           int i_ind = i *VFACTOR + v;
+//           float val =  (mid_row[v] + mid_row[v+2] + s_1_0.data[v] + s_1_2.data[v])/8 + (mid_row[v+1])/2;
+//           vec_wr.data[v] = (i_ind > 0 && i_ind < nx-1 && j > 1 && j < ny ) ? val : mid_row[v+1];
+//         }
+//         if(itr >= (nx/VFACTOR)){
+//           pipeS::PipeAt<idx+1>::write(vec_wr);
+//         }
+//       }
+//     }
+//   });
+//   });
+// }
 
 
 template <size_t idx>  struct PipeConvert_256_512_id;
@@ -272,19 +273,19 @@ void PipeConvert_256_512(queue &q, int total_itr,  ac_int<12,true> n_iter){
 // }
 
 
-template <int N, int n> struct loop {
-  static void instantiate(queue &q, int nx, int ny, int nz, int total_itr, int n_iter){
-    loop<N-1, n-1>::instantiate(q, nx, ny, nz, total_itr, n_iter);
-    stencil_compute<N-1, n-1, 4096, 8>(q, nx, ny, nz, total_itr, n_iter);
-  }
-};
+// template <int N, int n> struct loop {
+//   static void instantiate(queue &q, int nx, int ny, int nz, int total_itr, int n_iter){
+//     loop<N-1, n-1>::instantiate(q, nx, ny, nz, total_itr, n_iter);
+//     stencil_compute<N-1, n-1, 4096, 8>(q, nx, ny, nz, total_itr, n_iter);
+//   }
+// };
 
-template<> 
-struct loop<1, 1>{
-  static void instantiate(queue &q, int nx, int ny, int nz, int total_itr, int n_iter){
-    stencil_compute<0, 0, 4096, 8>(q, nx, ny, nz, total_itr, n_iter);
-  }
-};
+// template<> 
+// struct loop<1, 1>{
+//   static void instantiate(queue &q, int nx, int ny, int nz, int total_itr, int n_iter){
+//     stencil_compute<0, 0, 4096, 8>(q, nx, ny, nz, total_itr, n_iter);
+//   }
+// };
 
 // loop<90> l;
 
@@ -341,8 +342,14 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
       int ReadLimit_X = ((nz*ny+7)>>3)*(XBlocks << 3);
       int ReadLimit_Y = XBlocks*nz*ny ;
 
-      int B_X = (nz*ny+255)>>8;
-      int B_Y = ((nx*nz+255)>>8);
+
+      int block_g =9*8;
+      int B_X = (nz*ny+block_g-1)/block_g;
+      int B_Y = ((nx*nz+block_g-1)/block_g);
+
+      int block_g_r =45*8;
+      int B_X_r = (nz*ny+block_g_r-1)/block_g_r;
+      int B_Y_r = ((nx*nz+block_g_r-1)/block_g_r);
 
     // reading from memory
       event e = stencil_read_write<16,0, 1>(q, in_buf, out_buf, total_itr_16, n_iter, delay);
@@ -356,19 +363,21 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
       interleaved_row_block8<0, 128, 1, 2>(q, nx, ny, nz, n_iter, true);
       stream_8x8transpose<0, float, 2, 3>(q, nx, ny, nz, n_iter, true);
       thomas_interleave<0, float, 128, 3, 4>(q, nx, B_X, ReadLimit_X, n_iter);
-      thomas_forward<0, float, 128, 4, 5>(q, nx, B_X, n_iter);
-      thomas_backward<0, float, 128, 5, 7>(q, nx, B_X, ReadLimit_X, n_iter);
-      stream_8x8transpose<0, float, 7, 8>(q, nx, ny, nz, n_iter, true);
-      undo_interleaved_row_block8<0, 128, 8, 9>(q, nx, ny, nz, n_iter, true);
+      thomas_generate_r<0, float, 128, 5>(q, nx, B_X_r, n_iter);
+      thomas_forward<0, float, 128, 4, 6>(q, nx, B_X, n_iter);
+      thomas_backward<0, float, 128, 6, 8>(q, nx, B_X, ReadLimit_X, n_iter);
+      stream_8x8transpose<0, float, 8, 9>(q, nx, ny, nz, n_iter, true);
+      undo_interleaved_row_block8<0, 128, 9, 10>(q, nx, ny, nz, n_iter, true);
 
-      row2col<0, 128, 9, 10>(q, nx, ny, nz, n_iter);
-      thomas_interleave<0, float, 128, 10, 11>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      thomas_forward<0, float, 128, 11, 12>(q, ny, B_Y, n_iter);
-      thomas_backward<0, float, 128, 12, 14>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      col2row<0, 128, 14, 15>(q, nx, ny, nz, n_iter);
+      row2col<0, 128, 10, 11>(q, nx, ny, nz, n_iter);
+      thomas_interleave<0, float, 128, 11, 12>(q, ny, B_Y, ReadLimit_Y, n_iter);
+      thomas_generate_r<0, float, 128, 13>(q, ny, B_Y_r, n_iter);
+      thomas_forward<0, float, 128, 12, 14>(q, ny, B_Y, n_iter);
+      thomas_backward<0, float, 128, 14, 16>(q, ny, B_Y, ReadLimit_Y, n_iter);
+      col2row<0, 128, 16, 17>(q, nx, ny, nz, n_iter);
 
 
-      PipeConvert_256_512<8, 15, 1>(q, total_itr_8, n_iter);
+      PipeConvert_256_512<8, 17, 1>(q, total_itr_8, n_iter);
       PipeConvert_256_512<8, 51, 3>(q, total_itr_8, n_iter);
       //write back to memory
       // stencil_write<16>(q, out_buf, total_itr_16, kernel_time);

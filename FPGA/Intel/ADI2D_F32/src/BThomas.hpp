@@ -29,8 +29,9 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
 		#define SHIFT (3-FPPREC)
 		#define VFACTOR ((1 << SHIFT))
 		#define DSIZE 	(256/VFACTOR)
-		#define NBLK 	(32<<FPPREC)
+		#define NBLK 	(9 <<FPPREC)
 
+    	[[intel::disable_loop_pipelining]]
     	for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			const int n_blk = NBLK;
@@ -43,9 +44,9 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
 			ac_int<17,true> Bp1 = B+1;
 
 			int total_itr = B*NBLK*d0 + NBLK*d0;
-			loop_read: for(int itr= 0; itr < total_itr; itr++){
-					#pragma HLS PIPELINE II=1
-					#pragma HLS loop_tripcount min=1638400 max=2000000 avg=2000000
+
+			[[intel::initiation_interval(1)]]
+			for(int itr= 0; itr < total_itr; itr++){
 
 					ac_int<17,true> bat = batd1;
 					ac_int<8,true> i = id1;
@@ -95,24 +96,29 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
     return e;
 }
 
-template <size_t idx>  struct thomas_forward_id;
-template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
-event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,true> n_iter){
+
+template <size_t idx>  struct thomas_generate_r_id;
+template<bool FPPREC, class DType, int DMAX, int Pidx1>
+event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,true> n_iter){
 
 
 	event e = q.submit([&](handler &h) {
-    h.single_task<class thomas_forward_id<Pidx1>>([=] () [[intel::kernel_args_restrict]]{
+    h.single_task<class thomas_generate_r_id<Pidx1>>([=] () [[intel::kernel_args_restrict]]{
 		#define SHIFT (3-FPPREC)
 		#define VFACTOR ((1 << SHIFT))
 		#define DSIZE 	(256/VFACTOR)
-		#define NBLK 	(32<<FPPREC)
+		#define NBLK 	(45<<FPPREC)
+		#define NBLK_W 	(9<<FPPREC)
 
+
+
+
+    	[[intel::disable_loop_pipelining]]
 		for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			const int n_blk = NBLK;
 
-			struct dPath  c2_fw[DMAX*NBLK*2];
-			struct dPath  d2_fw[DMAX*NBLK*2];
+			struct dPath  r_mem[DMAX*NBLK*2];
 
 
 			ac_int<17,true> batd2 = 0;
@@ -122,8 +128,11 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 			ac_int<17,true> Bp1 = B+1;
 			int total_itr = B*NBLK*d0 + NBLK*d0;
 
-			struct dPath window_b2[NBLK], window_c2[NBLK], window_d2[NBLK];
-			loop_fw: for(int itr= 0; itr < total_itr; itr++){
+			struct dPath window_b2[NBLK], window_c2[NBLK];
+
+			// [[intel::ivdep(NBLK)]]
+			// [[intel::initiation_interval(1)]]
+			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<17,true> bat = batd2;
 				ac_int<13,true> i = id2;
@@ -143,9 +152,138 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 				}
 
 
-				struct dPath d2_read;
+				struct dPath vec_bb_r = window_b2[k];
+				struct dPath vec_cc_r = window_c2[k];
+
+				struct dPath r_vec;
+				struct dPath vec_bb_w, vec_cc_w;
+
+				#pragma unroll
+				for(int v =0; v < VFACTOR; v++){
+					DType aa_read = (i == 0 || i == d0 -1) ? 0.0 : -0.5; 
+					DType bb_read = (i == 0 || i == d0 -1) ? 1.0 :  2.0; 
+					DType cc_read = (i == 0 || i == d0 -1) ? 0.0 : -0.5;  
+
+					DType bb_old = vec_bb_r.data[v]; 
+					DType cc_old = vec_cc_r.data[v]; 
+
+
+
+					DType denom = (i == 0) ? bb_read : (bb_read - aa_read*cc_old);
+					DType r = 1.0/denom; //r_read.data[v]; 
+					DType c_w1 = cc_read;
+
+					DType b_wr = 1.0;
+					DType c_wr = c_w1*r;
+
+					r_vec.data[v] = r;
+
+					vec_cc_w.data[v] = c_wr;
+
+
+				}
+
+
+				window_b2[k] = vec_bb_w;
+				window_c2[k] = vec_cc_w;
+
+				unsigned int offsetR = ((bat & 1) == 0) ?  DMAX*NBLK : 0;
+				unsigned int offsetW = ((bat & 1) == 0) ?  0 : DMAX*NBLK;
+
+				int indW =  k*d0+i+offsetW;
+				r_mem[indW] = r_vec;
+	
+
+				ac_int<16,true> count = i*NBLK+k;
+				ac_int<16,true> blk = count % (NBLK_W*d0);
+				ac_int<4,true> blk_id = count / (NBLK_W*d0);
+
+				ac_int<13,true> i_new = blk / NBLK_W;
+				ac_int<8,true> k_new = (blk%NBLK_W) + blk_id*NBLK_W;
+
+				int indR =  k_new*d0+i_new + offsetR;
+
+				struct dPath r_vecR = r_mem[indR];
+
+				if(bat > 0){
+					pipeS::PipeAt<Pidx1>::write(r_vecR);
+				}
+
+			}
+		}
+
+		#undef SHIFT
+		#undef VFACTOR
+		#undef DSIZE
+		#undef NBLK
+		#undef NBLK_W
+	
+	});
+    });
+
+    return e;
+}
+
+
+
+
+
+template <size_t idx>  struct thomas_forward_id;
+template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
+event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,true> n_iter){
+
+
+	event e = q.submit([&](handler &h) {
+    h.single_task<class thomas_forward_id<Pidx1>>([=] () [[intel::kernel_args_restrict]]{
+		#define SHIFT (3-FPPREC)
+		#define VFACTOR ((1 << SHIFT))
+		#define DSIZE 	(256/VFACTOR)
+		#define NBLK 	(9<<FPPREC)
+
+    	[[intel::disable_loop_pipelining]]
+		for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
+
+			const int n_blk = NBLK;
+
+			struct dPath  c2_fw[DMAX*NBLK*2];
+			struct dPath  d2_fw[DMAX*NBLK*2];
+
+
+			ac_int<17,true> batd2 = 0;
+			ac_int<13,true> id2 =0;
+			ac_int<8,true>  kd2 = 0;
+
+			ac_int<17,true> Bp1 = B+1;
+			int total_itr = B*NBLK*d0 + NBLK*d0;
+
+			struct dPath window_b2[NBLK], window_c2[NBLK], window_d2[NBLK];
+
+			// [[intel::ivdep(NBLK)]]
+			// [[intel::initiation_interval(1)]]
+			for(int itr= 0; itr < total_itr; itr++){
+
+				ac_int<17,true> bat = batd2;
+				ac_int<13,true> i = id2;
+				ac_int<8,true> k = kd2;
+
+				if(k == NBLK -1){
+					kd2 = 0;
+				} else {
+					kd2++;
+				}
+
+				if(k == NBLK -1 && i == d0 -1){
+					id2 = 0;
+					batd2++;
+				} else if(k == NBLK -1){
+					id2++;
+				}
+
+
+				struct dPath d2_read, r_read;
 				if(bat < B){
 					d2_read = pipeS::PipeAt<Pidx1>::read();
+					r_read = pipeS::PipeAt<Pidx1+1>::read();
 				}
 
 				struct dPath vec_bb_r = window_b2[k];
@@ -155,7 +293,8 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 				struct dPath b2_fw_write, d2_fw_write;
 				struct dPath vec_bb_w, vec_dd_w, vec_cc_w;
 
-				fw_vec_loop: for(int v =0; v < VFACTOR; v++){
+				#pragma unroll
+				for(int v =0; v < VFACTOR; v++){
 					DType aa_read = (i == 0 || i == d0 -1) ? 0.0 : -0.5; 
 					DType bb_read = (i == 0 || i == d0 -1) ? 1.0 :  2.0; 
 					DType cc_read = (i == 0 || i == d0 -1) ? 0.0 : -0.5; 
@@ -168,7 +307,7 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 
 
 					DType denom = (i == 0) ? bb_read : (bb_read - aa_read*cc_old);
-					DType r = 1.0/denom;
+					DType r = r_read.data[v]; 
 					DType c_w1 = cc_read;
 					DType d_w1 = (i == 0) ? dd_read : (dd_read - aa_read*dd_old);
 
@@ -188,12 +327,14 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 
 
 					// if(bat < B){
-					// 	PRINTF("%f ", c_wr);
+					// 	PRINTF("(%f, %f) ", r, r_read.data[v]);
 					// }
 
 				}
 
-				// PRINTF(" itr : %d\n", itr);
+				// if(bat < B){
+				// 	PRINTF(" itr : %d\n", itr);
+				// }
 
 				window_b2[k] = vec_bb_w;
 				window_d2[k] = vec_dd_w;
@@ -256,8 +397,9 @@ event thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadL
 		#define SHIFT (3-FPPREC)
 		#define VFACTOR ((1 << SHIFT))
 		#define DSIZE 	(256/VFACTOR)
-		#define NBLK 	((32<<FPPREC))
+		#define NBLK 	((9<<FPPREC))
 
+   		[[intel::disable_loop_pipelining]]
     	for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			const int n_blk = NBLK;
@@ -272,7 +414,9 @@ event thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadL
 			ac_int<17,true> Bp1 = B+1;
 			int total_itr = B*NBLK*d0 + NBLK*d0;
 
-			loop_bw: for(int itr= 0; itr < total_itr; itr++){
+			// [[intel::ivdep(NBLK)]]
+			// [[intel::initiation_interval(1)]]
+			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<17,true> bat = batd3;
 				ac_int<13,true> id = id3;
@@ -308,7 +452,8 @@ event thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadL
 				ac_int<17,true> bat_1 = (bat-1);
 				int count = (int)(bat_1 * NBLK * d0) + id*NBLK+k;
 
-				bw_vec_loop: for(int v = 0; v < VFACTOR; v++){
+				#pragma unroll
+				for(int v = 0; v < VFACTOR; v++){
 					DType dd_read = d2_fw_read.data[v];
 					DType cc_read = c2_fw_read.data[v];
 
