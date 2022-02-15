@@ -20,7 +20,7 @@
 
 
 template <size_t idx>  struct thomas_interleave_id;
-template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
+template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2, int Pidx3>
 event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadLimit,  ac_int<12,true> n_iter){
 
 	event e = q.submit([&](handler &h) {
@@ -44,6 +44,9 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
 			ac_int<17,true> Bp1 = B+1;
 
 			int total_itr = B*NBLK*d0 + NBLK*d0;
+
+			struct dPath rand_vec;
+			pipeS::PipeAt<Pidx3>::write(rand_vec);
 
 			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
@@ -98,7 +101,7 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
 
 
 template <size_t idx>  struct thomas_generate_r_id;
-template<bool FPPREC, class DType, int DMAX, int Pidx1>
+template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
 event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,true> n_iter){
 
 
@@ -129,9 +132,10 @@ event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<
 			int total_itr = B*NBLK*d0 + NBLK*d0;
 
 			struct dPath window_b2[NBLK], window_c2[NBLK];
+			pipeS::PipeAt<Pidx2>::read();
 
-			// [[intel::ivdep(NBLK)]]
-			// [[intel::initiation_interval(1)]]
+			[[intel::ivdep(NBLK)]]
+			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<17,true> bat = batd2;

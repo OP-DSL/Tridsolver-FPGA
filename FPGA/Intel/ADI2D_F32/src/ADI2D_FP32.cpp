@@ -294,7 +294,7 @@ void PipeConvert_256_512(queue &q, int total_itr,  ac_int<12,true> n_iter){
 // Vector add in DPC++ on device: returns sum in 4th parameter "sum_parallel".
 //************************************
 void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_1, IntVector &acc_2, 
-                  int n_iter, int nx, int ny, int nz, int delay) {
+                  int n_iter, int nx, int ny, int nz, int delay1, int delay2) {
   // Create the range object for the vectors managed by the buffer.
   range<1> num_items{input.size()};
   int vec_size = input.size();
@@ -352,8 +352,8 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
       int B_Y_r = ((nx*nz+block_g_r-1)/block_g_r);
 
     // reading from memory
-      event e = stencil_read_write<16,0, 1>(q, in_buf, out_buf, total_itr_16, n_iter, delay);
-      stencil_read_write<16, 2, 3>(q, acc1_buf, acc2_buf, total_itr_16, n_iter, delay);
+      event e = stencil_read_write<16,0, 1>(q, in_buf, out_buf, total_itr_16, n_iter, delay1);
+      stencil_read_write<16, 2, 3>(q, acc1_buf, acc2_buf, total_itr_16, n_iter, delay2);
 
       PipeConvert_512_256<8, 0, 0>(q, total_itr_8, n_iter);
       PipeConvert_512_256<8, 2, 50>(q, total_itr_8, n_iter);
@@ -362,16 +362,16 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
 
       interleaved_row_block8<0, 128, 1, 2>(q, nx, ny, nz, n_iter, true);
       stream_8x8transpose<0, float, 2, 3>(q, nx, ny, nz, n_iter, true);
-      thomas_interleave<0, float, 128, 3, 4>(q, nx, B_X, ReadLimit_X, n_iter);
-      thomas_generate_r<0, float, 128, 5>(q, nx, B_X_r, n_iter);
+      thomas_interleave<0, float, 128, 3, 4, 300>(q, nx, B_X, ReadLimit_X, n_iter);
+      thomas_generate_r<0, float, 128, 5, 300>(q, nx, B_X_r, n_iter);
       thomas_forward<0, float, 128, 4, 6>(q, nx, B_X, n_iter);
       thomas_backward<0, float, 128, 6, 8>(q, nx, B_X, ReadLimit_X, n_iter);
       stream_8x8transpose<0, float, 8, 9>(q, nx, ny, nz, n_iter, true);
       undo_interleaved_row_block8<0, 128, 9, 10>(q, nx, ny, nz, n_iter, true);
 
       row2col<0, 128, 10, 11>(q, nx, ny, nz, n_iter);
-      thomas_interleave<0, float, 128, 11, 12>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      thomas_generate_r<0, float, 128, 13>(q, ny, B_Y_r, n_iter);
+      thomas_interleave<0, float, 128, 11, 12, 301>(q, ny, B_Y, ReadLimit_Y, n_iter);
+      thomas_generate_r<0, float, 128, 13, 301>(q, ny, B_Y_r, n_iter);
       thomas_forward<0, float, 128, 12, 14>(q, ny, B_Y, n_iter);
       thomas_backward<0, float, 128, 14, 16>(q, ny, B_Y, ReadLimit_Y, n_iter);
       col2row<0, 128, 16, 17>(q, nx, ny, nz, n_iter);
@@ -467,14 +467,17 @@ int main(int argc, char* argv[]) {
 
   // Create vector objects with "vector_size" to store the input and output data.
 
-  int delay = (nx/v_factor)*UFACTOR+15000;
+  // int delay = (nx/v_factor)*UFACTOR+15000;
+
+  int delay1 = (56*nx + nx/4*ny+ nx/8)/2 + 18*30/2 + 811;
+  int delay2 = (nx/8)/2 + 3*30/2 + 811 + 100;
 
   IntVector in_vec, out_parallel, acc_1, acc_2;
   IntVectorS ax_h, bx_h, cx_h;
   IntVectorS ay_h, by_h, cy_h;
 
   IntVectorS in_vec_h, out_sequential, acc_h;
-  in_vec.resize(nx/v_factor*ny*nz+delay);
+  in_vec.resize(nx/v_factor*ny*nz+delay1);
   in_vec_h.resize(nx*ny*nz);
 
   ax_h.resize(nx*ny*nz);
@@ -488,16 +491,16 @@ int main(int argc, char* argv[]) {
   acc_h.resize(nx*ny*nz);
 
   out_sequential.resize(nx*ny*nz);
-  out_parallel.resize(nx/v_factor*ny*nz+delay*2);
+  out_parallel.resize(nx/v_factor*ny*nz+delay1*2);
 
-  acc_1.resize(nx/v_factor*ny*nz+delay*2);
-  acc_2.resize(nx/v_factor*ny*nz+delay*2);
+  acc_1.resize(nx/v_factor*ny*nz+delay2*2);
+  acc_2.resize(nx/v_factor*ny*nz+delay2*2);
 
-  InitializeVector_Acc<v_factor>(acc_1, delay);
+  InitializeVector_Acc<v_factor>(acc_1, delay2);
   InitializeVectorS_acc(acc_h);
 
   // Initialize input vectors with values from 0 to vector_size - 1
-  InitializeVector<v_factor>(in_vec, delay);
+  InitializeVector<v_factor>(in_vec, delay1);
   InitializeVectorS(in_vec_h);
   try {
     queue q(d_selector,  dpc_common::exception_handler, property::queue::enable_profiling{});
@@ -512,7 +515,7 @@ int main(int argc, char* argv[]) {
 
     // Vector addition in DPC++
     
-    stencil_comp(q, in_vec, out_parallel, acc_1, acc_2, 2*n_iter, nx, ny, nz, delay);
+    stencil_comp(q, in_vec, out_parallel, acc_1, acc_2, 2*n_iter, nx, ny, nz, delay1, delay2);
 
   } catch (exception const &e) {
     std::cout << "An exception is caught for vector add.\n";
@@ -592,10 +595,10 @@ int main(int argc, char* argv[]) {
       for(int i = 0; i < nx/v_factor; i++){
         for(int v = 0; v < v_factor; v++){
           int ind = k*nx*ny + j*nx + i*v_factor;
-          float chk = fabs((out_sequential.at(ind+v) - in_vec.at(ind/v_factor+delay).data[v])/(out_sequential.at(ind+v)));
-          if(chk > 0.00001 && fabs(out_sequential.at(ind+v)) > 0.00001 || isnan(out_sequential.at(ind+v)) || isnan(in_vec.at(ind/v_factor+delay).data[v])){
+          float chk = fabs((out_sequential.at(ind+v) - in_vec.at(ind/v_factor+delay1).data[v])/(out_sequential.at(ind+v)));
+          if(chk > 0.00001 && fabs(out_sequential.at(ind+v)) > 0.00001 || isnan(out_sequential.at(ind+v)) || isnan(in_vec.at(ind/v_factor+delay1).data[v])){
             // std::cout << out_parallel.at(ind/v_factor+delay).data[v] << " ";
-            std::cout << "j,i, k, ind: " << j  << " " << i << " " << k << " " << ind << " " << out_sequential.at(ind+v) << " " << in_vec.at(ind/v_factor+delay).data[v] <<  std::endl;
+            std::cout << "j,i, k, ind: " << j  << " " << i << " " << k << " " << ind << " " << out_sequential.at(ind+v) << " " << in_vec.at(ind/v_factor+delay1).data[v] <<  std::endl;
             // return -1;
           }
         }
