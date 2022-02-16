@@ -357,7 +357,7 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 			const int l_interval = VFACTOR;
 
 			ac_int<13,true> TileX, TileY;
-			ac_int<33,true> NTiles;
+			ac_int<25,true> NTiles;
 			ac_int<9,true> XBlocks = (M >> SHIFT);
 			const int N_CU = FPPREC? 4 :8;
 
@@ -367,39 +367,48 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 				default: {TileX=XBlocks; TileY=N_CU; NTiles = ((B*N+ADJUST)>>SHIFT)*XBlocks; break;}
 			}
 
+			
+			unsigned int total_itr = (NTiles+1) << SHIFT;
+			
+			struct dPath tmp[VFACTOR*2];
+			struct dPath outR[VFACTOR];
+			[[intel::initiation_interval(1)]]
+			for(int itr=0; itr < total_itr; itr++){
+				
+				int blk = (itr >> SHIFT);
+				int offset_W = ((blk & 1) == 0 ? 0 : VFACTOR);
+				int offset_R = ((blk & 1) == 1 ? 0 : VFACTOR);
 
-			for(int itr=0; itr < NTiles; itr++){
-				struct dPath tmp[VFACTOR], outR;
-				for(int i = 0; i < VFACTOR; i++){
-					tmp[i] = pipeS::PipeAt<Pidx1>::read();
-
+				int add_W = (itr & 7) + offset_W;
+				int add_R = (itr & 7) + offset_R;
+				if (blk < NTiles){
+					tmp[add_W] = pipeS::PipeAt<Pidx1>::read();
 				}
 
-				if(transpose){
-					[[intel::initiation_interval(1)]]
-					for(int i = 0; i < VFACTOR; i++){
-						outR.data[0] = tmp[0].data[i];
-						outR.data[1] = tmp[1].data[i];
-						outR.data[2] = tmp[2].data[i];
-						outR.data[3] = tmp[3].data[i];
-						if(!FPPREC){
-							outR.data[4] = tmp[4].data[i];
-							outR.data[5] = tmp[5].data[i];
-							outR.data[6] = tmp[6].data[i];
-							outR.data[7] = tmp[7].data[i];
-						}
-						pipeS::PipeAt<Pidx2>::write(outR);
-					}
-
-				} else {
-					[[intel::initiation_interval(1)]]
-					for(int i = 0; i < VFACTOR; i++){
-							pipeS::PipeAt<Pidx2>::write(tmp[i]);
+				#pragma unroll
+				for(int v = 0; v < VFACTOR; v++){
+					outR[v].data[0] = tmp[offset_R+0].data[v];
+					outR[v].data[1] = tmp[offset_R+1].data[v];
+					outR[v].data[2] = tmp[offset_R+2].data[v];
+					outR[v].data[3] = tmp[offset_R+3].data[v];
+					if(!FPPREC){
+						outR[v].data[4] = tmp[offset_R+4].data[v];
+						outR[v].data[5] = tmp[offset_R+5].data[v];
+						outR[v].data[6] = tmp[offset_R+6].data[v];
+						outR[v].data[7] = tmp[offset_R+7].data[v];
 					}
 				}
+
+				struct dPath vec_W = transpose ? outR[itr&7] : tmp[add_R];
+				if (blk > 0){
+					pipeS::PipeAt<Pidx2>::write(vec_W);
+				}
+				
 
 			}
 		}
+
+
 
 		#undef SHIFT
 		#undef VFACTOR
