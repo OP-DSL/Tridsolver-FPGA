@@ -41,7 +41,7 @@ struct pipeS{
 
   template <size_t idx>
   struct Pipes{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 2048>;
+    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 64>;
   };
 
   template <size_t idx>
@@ -54,7 +54,7 @@ struct pipeM{
 
   template <size_t idx>
   struct PipeM{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath16, 2048>;
+    using pipeA = INTEL::pipe<struct_id<idx>, dPath16, 1024>;
   };
 
   template <size_t idx>
@@ -68,7 +68,7 @@ struct pipeB{
 
   template <size_t idx>
   struct PipeB{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath16, 8000000>;
+    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 64>;
   };
 
   template <size_t idx>

@@ -351,6 +351,9 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
       int B_X_r = (nz*ny+block_g_r-1)/block_g_r;
       int B_Y_r = ((nx*nz+block_g_r-1)/block_g_r);
 
+      int count_limit_x = (B_X*block_g*nx)/8;
+      int count_limit_y = (B_Y*block_g*ny)/8;
+
     // reading from memory
       event e = stencil_read_write<16,0, 1>(q, in_buf, out_buf, total_itr_16, n_iter, delay1);
       stencil_read_write<16, 2, 3>(q, acc1_buf, acc2_buf, total_itr_16, n_iter, delay2);
@@ -358,12 +361,18 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
       PipeConvert_512_256<8, 0, 0>(q, total_itr_8, n_iter);
       PipeConvert_512_256<8, 2, 50>(q, total_itr_8, n_iter);
 
+      // controlSig_generator<300>(q, n_iter);
+      
+
+      // controlSig_generator<301>(q, n_iter);
+      
+
       stencil_2d<0, float, 128, 0, 1, 50, 51>(q, data_g, n_iter, 0);
 
       interleaved_row_block8<0, 128, 1, 2>(q, nx, ny, nz, n_iter, true);
       stream_8x8transpose<0, float, 2, 3>(q, nx, ny, nz, n_iter, true);
       thomas_interleave<0, float, 128, 3, 4, 300>(q, nx, B_X, ReadLimit_X, n_iter);
-      thomas_generate_r<0, float, 128, 5, 300>(q, nx, B_X_r, n_iter);
+      thomas_generate_r<0, float, 128, 5, 300>(q, nx, B_X_r, count_limit_x, n_iter);
       thomas_forward<0, float, 128, 4, 6>(q, nx, B_X, n_iter);
       thomas_backward<0, float, 128, 6, 8>(q, nx, B_X, ReadLimit_X, n_iter);
       stream_8x8transpose<0, float, 8, 9>(q, nx, ny, nz, n_iter, true);
@@ -371,7 +380,7 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
 
       row2col<0, 128, 10, 11>(q, nx, ny, nz, n_iter);
       thomas_interleave<0, float, 128, 11, 12, 301>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      thomas_generate_r<0, float, 128, 13, 301>(q, ny, B_Y_r, n_iter);
+      thomas_generate_r<0, float, 128, 13, 301>(q, ny, B_Y_r, count_limit_y, n_iter);
       thomas_forward<0, float, 128, 12, 14>(q, ny, B_Y, n_iter);
       thomas_backward<0, float, 128, 14, 16>(q, ny, B_Y, ReadLimit_Y, n_iter);
       col2row<0, 128, 16, 17>(q, nx, ny, nz, n_iter);
@@ -469,7 +478,7 @@ int main(int argc, char* argv[]) {
 
   // int delay = (nx/v_factor)*UFACTOR+15000;
 
-  int delay1 = (56*nx + nx/4*ny+ nx/8)/2 + 18*30/2 + 811;
+  int delay1 = (56*nx + nx/4*ny)/2 + 18*30/2 + 811;
   int delay2 = (nx/8)/2 + 3*30/2 + 811 + 100;
 
   IntVector in_vec, out_parallel, acc_1, acc_2;

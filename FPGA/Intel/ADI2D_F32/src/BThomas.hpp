@@ -99,10 +99,28 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
     return e;
 }
 
+// template <size_t idx>  struct controlSig_generator_id;
+// template <int Pidx1>
+// event controlSig_generator(queue &q, ac_int<12,true> n_iter){
+// 	event e = q.submit([&](handler &h) {
+//     h.single_task<class controlSig_generator_id<Pidx1>>([=] () [[intel::kernel_args_restrict]]{
+// 		[[intel::initiation_interval(1)]]
+// 		for(int i = 0; i < n_iter; i++){
+// 			struct dPath rand_vec;
+// 			pipeS::PipeAt<Pidx1>::write(rand_vec);
+// 		}
+// 	});
+//     });
+
+//     return e;
+
+// }
+
+
 
 template <size_t idx>  struct thomas_generate_r_id;
 template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
-event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,true> n_iter){
+event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int count_limit, ac_int<12,true> n_iter){
 
 
 	event e = q.submit([&](handler &h) {
@@ -209,7 +227,7 @@ event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<
 
 				struct dPath r_vecR = r_mem[indR];
 
-				if(bat > 0){
+				if(bat > 0 && itr < count_limit+ NBLK*d0){
 					pipeS::PipeAt<Pidx1>::write(r_vecR);
 				}
 
@@ -262,8 +280,8 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 
 			struct dPath window_b2[NBLK], window_c2[NBLK], window_d2[NBLK];
 
-			// [[intel::ivdep(NBLK)]]
-			// [[intel::initiation_interval(1)]]
+			[[intel::ivdep(NBLK)]]
+			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<17,true> bat = batd2;
@@ -418,8 +436,8 @@ event thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadL
 			ac_int<17,true> Bp1 = B+1;
 			int total_itr = B*NBLK*d0 + NBLK*d0;
 
-			// [[intel::ivdep(NBLK)]]
-			// [[intel::initiation_interval(1)]]
+			[[intel::ivdep(NBLK)]]
+			[[intel::initiation_interval(1)]]
 			for(int itr= 0; itr < total_itr; itr++){
 
 				ac_int<17,true> bat = batd3;
