@@ -13,7 +13,7 @@
 
 template <size_t idx>  struct interleaved_row_block8_id;
 template <bool FPPREC, int DMAX, int Pidx1, int Pidx2>
-event interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<13,true> B, ac_int<13,true> n_iter, bool interleave){
+void interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<13,true> B, ac_int<13,true> n_iter, bool interleave){
 
 	event e = q.submit([&](handler &h) {
     h.single_task<class interleaved_row_block8_id<Pidx1>>([=] () {
@@ -89,14 +89,14 @@ event interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_
 	});
     });
 
-    return e;
+    // return e;
 
 }
 
 
 template <size_t idx>  struct row2col_id;
 template <bool FPPREC, int DMAX, int Pidx1, int Pidx2>
-event row2col(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,  ac_int<13,true> n_iter){
+void row2col(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,  ac_int<13,true> n_iter){
 
 
 	event e = q.submit([&](handler &h) {
@@ -171,13 +171,13 @@ event row2col(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,
 	});
     });
 
-    return e;
+    // return e;
 
 }
 
 template <size_t idx>  struct undo_interleaved_row_block8_id;
 template <bool FPPREC, int DMAX, int Pidx1, int Pidx2>
-event undo_interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B, ac_int<13,true> n_iter,  bool undo_interleave){
+void undo_interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B, ac_int<13,true> n_iter,  bool undo_interleave){
 
 
 	event e = q.submit([&](handler &h) {
@@ -242,6 +242,10 @@ event undo_interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N
 				if(i > 0){
 					pipeS::PipeAt<Pidx2>::write(tmpR);
 				}
+
+				if( Pidx1 == 26){
+					PRINTF("undo_interleaved_row_block8 u_iter itr : %d %d\n", u_itr, itr);
+				}
 			}
 		}
 
@@ -253,14 +257,14 @@ event undo_interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N
 	});
     });
 
-    return e;
+    // return e;
 
 }
 
 
 template <size_t idx>  struct col2row_id;
 template <bool FPPREC, int DMAX, int Pidx1, int Pidx2>
-event col2row(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B, ac_int<13,true> n_iter){
+void col2row(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B, ac_int<13,true> n_iter){
 
 	event e = q.submit([&](handler &h) {
     h.single_task<class col2row_id<Pidx1>>([=] () {
@@ -335,13 +339,13 @@ event col2row(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,
 	});
     });
 
-    return e;
+    // return e;
 }
 
 
 template <size_t idx>  struct stream_8x8transpose_id;
 template <bool FPPREC, class DType, int Pidx1, int Pidx2>
-event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,  ac_int<13,true> n_iter,  bool transpose){
+void stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B,  ac_int<13,true> n_iter,  bool transpose){
 
 
 	event e = q.submit([&](handler &h) {
@@ -403,6 +407,11 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 				if (blk > 0){
 					pipeS::PipeAt<Pidx2>::write(vec_W);
 				}
+
+
+				// if( Pidx1 == 25){
+					// PRINTF("stream_8x8transpose u_iter itr : %d %d\n", u_itr, itr);
+				// }
 				
 
 			}
@@ -419,7 +428,7 @@ event stream_8x8transpose(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int
 	});
     });
 
-    return e;
+    // return e;
 
 }
 

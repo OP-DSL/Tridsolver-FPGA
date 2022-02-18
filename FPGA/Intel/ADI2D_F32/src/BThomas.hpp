@@ -21,7 +21,7 @@
 
 template <size_t idx>  struct thomas_interleave_id;
 template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2, int Pidx3>
-event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadLimit,  ac_int<12,true> n_iter){
+void thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadLimit,  ac_int<12,true> n_iter){
 
 	event e = q.submit([&](handler &h) {
     h.single_task<class thomas_interleave_id<Pidx1>>([=] () [[intel::kernel_args_restrict]]{
@@ -96,7 +96,7 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
 	});
     });
 
-    return e;
+    // return e;
 }
 
 // template <size_t idx>  struct controlSig_generator_id;
@@ -120,7 +120,7 @@ event thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Rea
 
 template <size_t idx>  struct thomas_generate_r_id;
 template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
-event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int count_limit, ac_int<12,true> n_iter){
+void thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int count_limit, ac_int<12,true> n_iter){
 
 
 	event e = q.submit([&](handler &h) {
@@ -243,7 +243,7 @@ event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int cou
 	});
     });
 
-    return e;
+    // return e;
 }
 
 
@@ -252,7 +252,7 @@ event thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int cou
 
 template <size_t idx>  struct thomas_forward_id;
 template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
-event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,true> n_iter){
+void thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,true> n_iter){
 
 
 	event e = q.submit([&](handler &h) {
@@ -354,7 +354,7 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 
 				}
 
-				// if(bat < B){
+				// if(bat < B && Pidx1 == 21){
 				// 	PRINTF(" itr : %d\n", itr);
 				// }
 
@@ -403,14 +403,14 @@ event thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,
 	});
     });
 
-    return e;
+    // return e;
 }
 
 
 
 template <size_t idx>  struct thomas_backward_id;
 template<bool FPPREC, class DType, int DMAX, int Pidx1, int Pidx2>
-event thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadLimit,   ac_int<12,true> n_iter){
+void thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadLimit,   ac_int<12,true> n_iter){
 
 
 	event e = q.submit([&](handler &h) {
@@ -497,6 +497,10 @@ event thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadL
 
 				}
 
+				// if(bat < B && Pidx1 == 23){
+				// 	PRINTF("u_iter itr : %d %d\n", u_itr, itr);
+				// }
+
 				// PRINTF(" itr : %d\n", itr);
 
 				unsigned int offsetR = ((bat & 1) == 0) ?  DMAX*NBLK : 0;
@@ -526,7 +530,7 @@ event thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadL
 	});
     });
 
-    return e;
+    // return e;
 
 }
 
