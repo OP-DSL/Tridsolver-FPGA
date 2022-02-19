@@ -33,7 +33,7 @@ typedef std::vector<float> IntVectorS;
 using rd_pipe = INTEL::pipe<class pVec16_r, dPath16, 512000>;
 using wr_pipe = INTEL::pipe<class pVec16_w, dPath16, 512000>;
 
-#define D_MAX 56
+#define D_MAX 64
 
 struct pipeS{
   pipeS() = delete;
@@ -68,7 +68,7 @@ struct pipeB{
 
   template <size_t idx>
   struct PipeB{
-    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 4095>;
+    using pipeA = INTEL::pipe<struct_id<idx>, dPath, 6000>;
   };
 
   template <size_t idx>

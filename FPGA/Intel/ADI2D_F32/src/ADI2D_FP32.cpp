@@ -486,7 +486,7 @@ int main(int argc, char* argv[]) {
   IntVectorS ay_h, by_h, cy_h;
 
   IntVectorS in_vec_h, out_sequential, acc_h;
-  in_vec.resize(nx/v_factor*ny*nz+delay1);
+  in_vec.resize(nx/v_factor*ny*nz+delay1*2);
   in_vec_h.resize(nx*ny*nz);
 
   ax_h.resize(nx*ny*nz);
@@ -532,10 +532,9 @@ int main(int argc, char* argv[]) {
   }
 
 
-
   // Compute the sum of two vectors in sequential for validation.
 
-  for(int itr= 0; itr < 2*n_iter; itr++){
+  for(int itr= 0; itr < UFACTOR*2*n_iter; itr++){
     for(int k = 0; k < nz; k++){
       for(int j = 0; j < ny; j++){
         for(int i = 0; i < nx; i++){
@@ -637,6 +636,19 @@ int main(int argc, char* argv[]) {
   in_vec.clear();
   out_sequential.clear();
   out_parallel.clear();
+
+  ax_h.clear();
+  bx_h.clear();
+  cx_h.clear();
+
+  ay_h.clear();
+  by_h.clear();
+  cy_h.clear();
+
+  acc_h.clear();
+
+  acc_1.clear();
+  acc_2.clear();
 
   std::cout << "Vector add successfully completed on device.\n";
   return 0;

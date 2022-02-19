@@ -36,6 +36,8 @@ void thomas_interleave(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int Read
 
 			const int n_blk = NBLK;
 
+
+			// [[intel::force_pow2_depth(0)]] 
 			struct dPath  d2[DMAX*NBLK*2];
 
 			ac_int<17,true> batd1 = 0;
@@ -138,7 +140,8 @@ void thomas_generate_r(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int coun
 		for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
 			const int n_blk = NBLK;
-
+			
+			// [[intel::force_pow2_depth(0)]] 
 			struct dPath  r_mem[DMAX*NBLK*2];
 
 
@@ -267,7 +270,9 @@ void thomas_forward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, ac_int<12,t
 
 			const int n_blk = NBLK;
 
+			// [[intel::force_pow2_depth(0)]] 
 			struct dPath  c2_fw[DMAX*NBLK*2];
+			// [[intel::force_pow2_depth(0)]] 
 			struct dPath  d2_fw[DMAX*NBLK*2];
 
 
@@ -426,6 +431,7 @@ void thomas_backward(queue &q, ac_int<14,true> d0, ac_int<15,true> B, int ReadLi
 
 			const int n_blk = NBLK;
 
+			// [[intel::force_pow2_depth(0)]] 
 			struct dPath  u2[DMAX*NBLK*2];
 			struct dPath window_u2[NBLK];
 
