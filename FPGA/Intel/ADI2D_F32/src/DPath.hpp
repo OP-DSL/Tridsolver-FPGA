@@ -38,7 +38,7 @@ void interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_i
 			}
 
 
-			// [[intel::force_pow2_depth(0)]] 
+			[[intel::force_pow2_depth(0)]] 
 			struct dPath tmp_M[DMAX*N_CU*2];
 
 			ac_int<25,true> NTilesp1 = NTiles+1;
@@ -120,7 +120,7 @@ void row2col(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B, 
 			TileY = N;
 			NTiles = B;
 
-			// [[intel::force_pow2_depth(0)]] 
+			[[intel::force_pow2_depth(0)]] 
 			struct dPath tmp_M[DMAX*DMAX/VFACTOR*2];
 			struct dPath tmp;
 
@@ -202,7 +202,7 @@ void undo_interleaved_row_block8(queue &q, ac_int<13,true> M, ac_int<13,true> N,
 				case false: {TileX=8; TileY=N; NTiles = (((XBlocks*B+ADJUST)>>SHIFT)); break;}
 				default: {TileX=XBlocks; TileY=N_CU; NTiles = (B*N+ADJUST)>>SHIFT; break;}
 			}
-			// [[intel::force_pow2_depth(0)]] 
+			[[intel::force_pow2_depth(0)]] 
 			struct dPath tmp_M[DMAX*N_CU*2];
 			#pragma HLS RESOURCE variable=tmp_M core=XPM_MEMORY latency=2
 			ac_int<25,true> NTilesp1 = NTiles+1;
@@ -290,7 +290,7 @@ void col2row(queue &q, ac_int<13,true> M, ac_int<13,true> N, ac_int<15,true> B, 
 			NTiles = B;
 
 
-			// [[intel::force_pow2_depth(0)]] 
+			[[intel::force_pow2_depth(0)]] 
 			struct dPath tmp_M[DMAX*DMAX/VFACTOR*2];
 			struct dPath tmp;
 

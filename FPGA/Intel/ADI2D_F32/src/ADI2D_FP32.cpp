@@ -36,7 +36,7 @@
 // #include "BThomas.hpp"
 
 
-#define UFACTOR 2
+#define UFACTOR 8
 
 template <class DType>
  void thomas_golden(DType* __restrict a, DType* __restrict b, DType* __restrict c,
@@ -482,7 +482,7 @@ int main(int argc, char* argv[]) {
   int delay2 = ((56*nx + nx/4*ny)/2 + 18*30/2)*(UFACTOR-1) + 811 ; //((nx/8)/2 + 3*30/2)*2 + 811 + 100 + 10000;
 
   IntVector in_vec, out_parallel, acc_1, acc_2;
-  IntVectorS ax_h, bx_h, cx_h;
+  IntVectorS ax_h, bx_h, cx_h, out_device;
   IntVectorS ay_h, by_h, cy_h;
 
   IntVectorS in_vec_h, out_sequential, acc_h;
@@ -498,6 +498,7 @@ int main(int argc, char* argv[]) {
   cy_h.resize(nx*ny*nz);
 
   acc_h.resize(nx*ny*nz);
+  out_device.resize(nx*ny*nz);
 
   out_sequential.resize(nx*ny*nz);
   out_parallel.resize(nx/v_factor*ny*nz+delay1*2);
@@ -597,19 +598,23 @@ int main(int argc, char* argv[]) {
   // for (size_t i = 0; i < out_sequential.size(); i++)
   //   out_sequential.at(i) = in_vec.at(i) + 50;
 
+  for(int i = 0; i < (nx*ny*nz)/v_factor; i++){
+    for(int v= 0; v < v_factor; v++){
+      out_device.at(i*v_factor + v) = in_vec.at(i+delay1).data[v];
+    }
+  }
+
   // Verify that the two vectors are equal. 
   for(int k = 0; k < nz; k++){ 
     for(int j = 0; j < ny; j++){
-      for(int i = 0; i < nx/v_factor; i++){
-        for(int v = 0; v < v_factor; v++){
-          int ind = k*nx*ny + j*nx + i*v_factor;
-          float chk = fabs((out_sequential.at(ind+v) - in_vec.at(ind/v_factor+delay1).data[v])/(out_sequential.at(ind+v)));
-          if(chk > 0.00001 && fabs(out_sequential.at(ind+v)) > 0.00001 || isnan(out_sequential.at(ind+v)) || isnan(in_vec.at(ind/v_factor+delay1).data[v])){
-            // std::cout << out_parallel.at(ind/v_factor+delay).data[v] << " ";
-            std::cout << "j,i, k, ind: " << j  << " " << i << " " << k << " " << ind << " " << out_sequential.at(ind+v) << " " << in_vec.at(ind/v_factor+delay1).data[v] <<  std::endl;
-            // return -1;
-          }
+      for(int i = 0; i < nx; i++){
+        int ind = k*nx*ny + j*nx + i;
+        float chk = fabs((out_sequential.at(ind) - out_device.at(ind))/(out_sequential.at(ind)));
+        if(chk > 0.00001 && fabs(out_sequential.at(ind)) > 0.00001  || isnan(out_sequential.at(ind)) || isnan(out_device.at(ind))){
+          std::cout << "j,i, k, ind: " << j  << " " << i << " " << k << " " << ind << " " << out_sequential.at(ind) << " " << out_device.at(ind) <<  std::endl;
+          // return -1;
         }
+
         // std::cout << std::endl;
       }
     }
@@ -636,6 +641,7 @@ int main(int argc, char* argv[]) {
   in_vec.clear();
   out_sequential.clear();
   out_parallel.clear();
+  out_device.clear();
 
   ax_h.clear();
   bx_h.clear();
