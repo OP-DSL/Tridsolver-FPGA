@@ -28,15 +28,15 @@
 #include <CL/sycl/INTEL/ac_types/ac_int.hpp>
 #endif
 
-#include "data_types.h"
-#include "stencils.hpp"
-#include "BThomas.hpp"
-#include "DPath.hpp"
+#include "../../lib/data_types.h"
+#include "../../lib/stencils.hpp"
+#include "../../lib/BThomas.hpp"
+#include "../../lib/DPath.hpp"
 
 // #include "BThomas.hpp"
 
 
-#define UFACTOR 8
+#define UFACTOR 1
 
 template <class DType>
  void thomas_golden(DType* __restrict a, DType* __restrict b, DType* __restrict c,
@@ -104,9 +104,8 @@ event stencil_read_write(queue &q, buffer<struct dPath16, 1> &in_buf, buffer<str
 template <size_t idx>  struct PipeConvert_512_256_id;
 template<int VFACTOR, int idx1, int idx2>
 void PipeConvert_512_256(queue &q, int total_itr, ac_int<12,true> n_iter){
+    ac_int<40,true> count = total_itr*n_iter;
       event e1 = q.submit([&](handler &h) {
-
-      ac_int<40,true> count = total_itr*n_iter;
       h.single_task<class PipeConvert_512_256_id<idx2>>([=] () [[intel::kernel_args_restrict]]{
         struct dPath16 data16;
         [[intel::initiation_interval(1)]]
@@ -134,9 +133,8 @@ void PipeConvert_512_256(queue &q, int total_itr, ac_int<12,true> n_iter){
 template <size_t idx>  struct PipeS2B_id;
 template<int idx1, int idx2>
 void PipeS2B(queue &q, int total_itr, ac_int<12,true> n_iter){
+    ac_int<40,true> count = total_itr*n_iter;
       event e1 = q.submit([&](handler &h) {
-
-      ac_int<40,true> count = total_itr*n_iter;
       h.single_task<class PipeS2B_id<idx2>>([=] () [[intel::kernel_args_restrict]]{
         struct dPath16 data16;
         [[intel::initiation_interval(1)]]
@@ -153,9 +151,9 @@ void PipeS2B(queue &q, int total_itr, ac_int<12,true> n_iter){
 template <size_t idx>  struct PipeB2S_id;
 template<int idx1, int idx2>
 void PipeB2S(queue &q, int total_itr, ac_int<12,true> n_iter){
-      event e1 = q.submit([&](handler &h) {
+  ac_int<40,true> count = total_itr*n_iter;
 
-      ac_int<40,true> count = total_itr*n_iter;
+      event e1 = q.submit([&](handler &h) {
       h.single_task<class PipeB2S_id<idx2>>([=] () [[intel::kernel_args_restrict]]{
         struct dPath16 data16;
         [[intel::initiation_interval(1)]]
@@ -261,7 +259,7 @@ struct loop<0> {
 // Vector add in DPC++ on device: returns sum in 4th parameter "sum_parallel".
 //************************************
 void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_1, IntVector &acc_2, 
-                  int n_iter, int nx, int ny, int nz, int delay1, int delay2) {
+                  int n_iter, int nx, int ny, int nz, int delay1, int delay2, int times) {
   // Create the range object for the vectors managed by the buffer.
   range<1> num_items{input.size()};
   int vec_size = input.size();
@@ -322,90 +320,29 @@ void stencil_comp(queue &q, IntVector &input, IntVector &output, IntVector &acc_
       int count_limit_y = (B_Y*block_g*ny)/8;
 
     // reading from memory
-      event e = stencil_read_write<16,0, 1>(q, in_buf, out_buf, total_itr_16, n_iter, delay1);
-      stencil_read_write<16, 2, 3>(q, acc1_buf, acc2_buf, total_itr_16, n_iter, delay2);
+      for(int i = 0; i < times; i++){
+        event e = stencil_read_write<16,0, 1>(q, in_buf, out_buf, total_itr_16, n_iter, delay1);
+        stencil_read_write<16, 2, 3>(q, acc1_buf, acc2_buf, total_itr_16, n_iter, delay2);
 
-      PipeConvert_512_256<8, 0, 0>(q, total_itr_8, n_iter);
-      PipeConvert_512_256<8, 2, 2000>(q, total_itr_8, n_iter);
-      
+        PipeConvert_512_256<8, 0, 0>(q, total_itr_8, n_iter);
+        PipeConvert_512_256<8, 2, 2000>(q, total_itr_8, n_iter);
+        
 
-
-      #define SHIFT1 17
-      // Iter one
-
-      loop<UFACTOR-1>::instantiate(q, data_g, nx, ny, nz, n_iter, total_itr_8, B_X, ReadLimit_X, B_X_r, count_limit_x, 
-              B_Y, ReadLimit_Y, B_Y_r, count_limit_y);
+        loop<UFACTOR-1>::instantiate(q, data_g, nx, ny, nz, n_iter, total_itr_8, B_X, ReadLimit_X, B_X_r, count_limit_x, 
+                B_Y, ReadLimit_Y, B_Y_r, count_limit_y);
 
 
-      // stencil_2d<0, float, D_MAX, 0, 1, 500, 501>(q, data_g, n_iter, 0);
-      // // PipeS2B<501,0>(q, total_itr_8, n_iter);
-      // // PipeB2S<0,502>(q, total_itr_8, n_iter);
+        PipeConvert_256_512<8, 21*UFACTOR, 1>(q, total_itr_8, n_iter);
+        PipeConvert_256_512<8, 2002+(UFACTOR-1)*2, 3>(q, total_itr_8, n_iter);
 
-      // interleaved_row_block8<0, D_MAX, 1, 2>(q, nx, ny, nz, n_iter, true);
-      // stream_8x8transpose<0, float, 2, 3>(q, nx, ny, nz, n_iter, true);
-      // thomas_interleave<0, float, D_MAX, 3, 4, 300>(q, nx, B_X, ReadLimit_X, n_iter);
-      // thomas_generate_r<0, float, D_MAX, 5, 300>(q, nx, B_X_r, count_limit_x, n_iter);
-      // thomas_forward<0, float, D_MAX, 4, 6>(q, nx, B_X, n_iter);
-      // thomas_backward<0, float, D_MAX, 6, 8>(q, nx, B_X, ReadLimit_X, n_iter);
-      // stream_8x8transpose<0, float, 8, 9>(q, nx, ny, nz, n_iter, true);
-      // undo_interleaved_row_block8<0, D_MAX, 9, 10>(q, nx, ny, nz, n_iter, true);
+        q.wait();
 
-      // row2col<0, D_MAX, 10, 11>(q, nx, ny, nz, n_iter);
-      // thomas_interleave<0, float, D_MAX, 11, 12, 301>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      // thomas_generate_r<0, float, D_MAX, 13, 301>(q, ny, B_Y_r, count_limit_y, n_iter);
-      // thomas_forward<0, float, D_MAX, 12, 14>(q, ny, B_Y, n_iter);
-      // thomas_backward<0, float, D_MAX, 14, 16>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      // col2row<0, D_MAX, 16, 17>(q, nx, ny, nz, n_iter);
-
-      // Iter Two
-      // stencil_2d<0, float, D_MAX, 0+SHIFT1, 1+SHIFT1, 501, 503>(q, data_g, n_iter, 0);
-      // // PipeS2B<503,1>(q, total_itr_8, n_iter);
-      // // PipeB2S<1,504>(q, total_itr_8, n_iter);
-
-      // interleaved_row_block8<0, D_MAX, 1+SHIFT1, 2+SHIFT1>(q, nx, ny, nz, n_iter, true);
-      // stream_8x8transpose<0, float, 2+SHIFT1, 3+SHIFT1>(q, nx, ny, nz, n_iter, true);
-      // thomas_interleave<0, float, D_MAX, 3+SHIFT1, 4+SHIFT1, 300+SHIFT1>(q, nx, B_X, ReadLimit_X, n_iter);
-      // thomas_generate_r<0, float, D_MAX, 5+SHIFT1, 300+SHIFT1>(q, nx, B_X_r, count_limit_x, n_iter);
-      // thomas_forward<0, float, D_MAX, 4+SHIFT1, 6+SHIFT1>(q, nx, B_X, n_iter);
-      // thomas_backward<0, float, D_MAX, 6+SHIFT1, 8+SHIFT1>(q, nx, B_X, ReadLimit_X, n_iter);
-      // stream_8x8transpose<0, float, 8+SHIFT1, 9+SHIFT1>(q, nx, ny, nz, n_iter, true);
-      // undo_interleaved_row_block8<0, D_MAX, 9+SHIFT1, 10+SHIFT1>(q, nx, ny, nz, n_iter, true);
-
-      // row2col<0, D_MAX, 10+SHIFT1, 11+SHIFT1>(q, nx, ny, nz, n_iter);
-      // thomas_interleave<0, float, D_MAX, 11+SHIFT1, 12+SHIFT1, 301+SHIFT1>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      // thomas_generate_r<0, float, D_MAX, 13+SHIFT1, 301+SHIFT1>(q, ny, B_Y_r, count_limit_y, n_iter);
-      // thomas_forward<0, float, D_MAX, 12+SHIFT1, 14+SHIFT1>(q, ny, B_Y, n_iter);
-      // thomas_backward<0, float, D_MAX, 14+SHIFT1, 16+SHIFT1>(q, ny, B_Y, ReadLimit_Y, n_iter);
-      // col2row<0, D_MAX, 11+SHIFT1, 17+SHIFT1>(q, nx, ny, nz, n_iter);
-
-
+        double start0 = e.get_profiling_info<info::event_profiling::command_start>();
+        double end0 = e.get_profiling_info<info::event_profiling::command_end>(); 
+        kernel_time += (end0-start0)*1e-9;
+    }
 
       
-
-
-
-      PipeConvert_256_512<8, 21*UFACTOR, 1>(q, total_itr_8, n_iter);
-      PipeConvert_256_512<8, 2002+(UFACTOR-1)*2, 3>(q, total_itr_8, n_iter);
-
-      #undef SHIFT1
-      //write back to memory
-      // stencil_write<16>(q, out_buf, total_itr_16, kernel_time);
-      q.wait();
-
-      double start0 = e.get_profiling_info<info::event_profiling::command_start>();
-      double end0 = e.get_profiling_info<info::event_profiling::command_end>(); 
-      kernel_time += (end0-start0)*1e-9;
-
-      
-    //   // reading from memory
-    //   stencil_read<16>(q, out_buf, total_itr_16);
-    //   PipeConvert_512_256<8>(q, total_itr_8);
-    //   loop<UFACTOR, UFACTOR>::instantiate(q, nx, ny, nz, total_itrS);
-    //   PipeConvert_256_512<UFACTOR, 8>(q, total_itr_8);
-    //   //write back to memory
-    //   stencil_write<16>(q, in_buf, total_itr_16, kernel_time);
-    //   q.wait();
-    // }
 
     std::cout << "fimished reading from the pipe\n" << std::endl;
 
@@ -454,12 +391,13 @@ void InitializeVectorS_acc(IntVectorS &a) {
 int main(int argc, char* argv[]) {
 
   int n_iter = 1;
-  int nx = 128, ny = 128, nz=2;
+  int nx = 128, ny = 128, nz=2, times = 1;
   // Change vector_size if it was passed as argument
   if (argc > 1) n_iter = std::stoi(argv[1]);
   if (argc > 2) nx = std::stoi(argv[2]);
   if (argc > 3) ny = std::stoi(argv[3]);
   if (argc > 4) nz = std::stoi(argv[4]);
+  if (argc > 5) times = std::stoi(argv[5]);
 
   nx = (nx % 8 == 0 ? nx : (nx/8+1)*8);
   // Create device selector for the device of your interest.
@@ -479,7 +417,7 @@ int main(int argc, char* argv[]) {
   // int delay = (nx/v_factor)*UFACTOR+15000;
 
   int delay1 = ((56*nx + nx/4*ny)/2 + 18*30/2)*UFACTOR + 811;
-  int delay2 = ((56*nx + nx/4*ny)/2 + 18*30/2)*(UFACTOR-1) + 811 ; //((nx/8)/2 + 3*30/2)*2 + 811 + 100 + 10000;
+  int delay2 = ((56*nx + nx/4*ny)/2 + 18*30/2)*(UFACTOR-1) + 811 + ((nx/8)/2 + 3*30/2) ; //((nx/8)/2 + 3*30/2)*2 + 811 + 100 + 10000;
 
   IntVector in_vec, out_parallel, acc_1, acc_2;
   IntVectorS ax_h, bx_h, cx_h, out_device;
@@ -525,7 +463,7 @@ int main(int argc, char* argv[]) {
 
     // Vector addition in DPC++
     
-    stencil_comp(q, in_vec, out_parallel, acc_1, acc_2, 2*n_iter, nx, ny, nz, delay1, delay2);
+    stencil_comp(q, in_vec, out_parallel, acc_1, acc_2, 2*n_iter, nx, ny, nz, delay1, delay2, times);
 
   } catch (exception const &e) {
     std::cout << "An exception is caught for vector add.\n";
@@ -605,38 +543,24 @@ int main(int argc, char* argv[]) {
   }
 
   // Verify that the two vectors are equal. 
-  for(int k = 0; k < nz; k++){ 
-    for(int j = 0; j < ny; j++){
-      for(int i = 0; i < nx; i++){
-        int ind = k*nx*ny + j*nx + i;
-        float chk = fabs((out_sequential.at(ind) - out_device.at(ind))/(out_sequential.at(ind)));
-        if(chk > 0.00001 && fabs(out_sequential.at(ind)) > 0.00001  || isnan(out_sequential.at(ind)) || isnan(out_device.at(ind))){
-          std::cout << "j,i, k, ind: " << j  << " " << i << " " << k << " " << ind << " " << out_sequential.at(ind) << " " << out_device.at(ind) <<  std::endl;
-          // return -1;
-        }
+  if(times == 1){
+    for(int k = 0; k < nz; k++){ 
+      for(int j = 0; j < ny; j++){
+        for(int i = 0; i < nx; i++){
+          int ind = k*nx*ny + j*nx + i;
+          float chk = fabs((out_sequential.at(ind) - out_device.at(ind))/(out_sequential.at(ind)));
+          if(chk > 0.00001 && fabs(out_sequential.at(ind)) > 0.00001  || isnan(out_sequential.at(ind)) || isnan(out_device.at(ind))){
+            std::cout << "j,i, k, ind: " << j  << " " << i << " " << k << " " << ind << " " << out_sequential.at(ind) << " " << out_device.at(ind) <<  std::endl;
+            // return -1;
+          }
 
-        // std::cout << std::endl;
+          // std::cout << std::endl;
+        }
       }
     }
   }
 
-  // for (size_t i = 0; i < out_sequential.size(); i++) {
-  //   if (in_vec_h.at(i) != in_vec.at(i)) {
-  //     std::cout << "Vector add failed on device.\n";
-  //     return -1;
-  //   }
-  // }
 
-  // int indices[]{0, 1, 2, (static_cast<int>(in_vec.size()) - 1)};
-  // constexpr size_t indices_size = sizeof(indices) / sizeof(int);
-
-  // // Print out the result of vector add.
-  // for (int i = 0; i < indices_size; i++) {
-  //   int j = indices[i];
-  //   if (i == indices_size - 1) std::cout << "...\n";
-  //   std::cout << "[" << j << "]: " << in_vec[j] << " + 50 = "
-  //             << out_parallel[j] << "\n";
-  // }
   in_vec_h.clear();
   in_vec.clear();
   out_sequential.clear();

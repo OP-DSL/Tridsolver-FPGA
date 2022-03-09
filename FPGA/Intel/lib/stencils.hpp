@@ -29,7 +29,7 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
     for(unsigned short u_itr = 0; u_itr < n_iter; u_itr++){
 
         short end_index = data_g.end_index;
-         bool dnt_acc_updt = (u_itr == 0 ? 1 : 0);
+         bool dnt_acc_updt = ((u_itr == 0 && Pidx1 == 0)  ? 1 : 0);
 
         // Registers to hold data specified by stencil
         DType row_arr3[VFACTOR];
@@ -66,8 +66,8 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
 
 
         // flattened loop to reduce the inter loop latency
-        unsigned short i = 0, j = 0, j_l = 0;
-        unsigned short i_d = 0, j_d = 0;
+        short i = 0, j = 0, j_l = 0;
+        short i_d = 0, j_d = 0, j_l_d = 0;
 
         [[intel::initiation_interval(1)]]
         for(unsigned int itr = 0; itr < grid_size; itr++) {
@@ -89,6 +89,14 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
                 i_d = 1;
             } else if(cmp_j){
                 i_d++;
+            }
+
+                       // line buffer
+            j_l = j_l_d;
+            if(j_l >= end_index - 2){
+                j_l_d = 0;
+            } else {
+            	j_l_d++;
             }
 
 
@@ -122,11 +130,7 @@ event stencil_2d(queue &q, struct data_G data_g, unsigned short n_iter, bool ski
             row1_acc_n[j_l] = acc_in_vec;
 
 
-            // line buffer
-            j_l++;
-            if(j_l >= end_index - 1){
-                j_l = 0;
-            }
+ 
 
             #pragma unroll
             for(int k = 0; k < VFACTOR; k++){
