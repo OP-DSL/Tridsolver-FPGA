@@ -1,8 +1,8 @@
-### Batched Tridiagonal Systems Solver Library for Xilinx FPGAs
-The Tridsolver-FPGA Library provides high-throughput implementations of multiple multi-dimensional tridiagonal system solvers on FPGAs. The libray is based on the inexpensive Thomas algorithm with batching of multiple systems for solving smaller and medium sized systems and hybrid Thomas_PCR and Thomas_Thomas algorithms to solve larger systems. The HLS Techniques used to implement the Libray and data path for 3D ADI applications can be found [here](https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Docs/HLS_Techniques.md). The library currentry only supports Xilinx FPGA devices and have been tested on Xilinx Alveo U280 and Alveo U50 cards. Ongoing and future work will add support for Intel FPGAs. The library and performance results are currenty under review for publication. 
+### Batched Tridiagonal Systems Solver Library for Xilinx and Intel FPGAs
+The Tridsolver-FPGA Library provides high-throughput implementations of multiple multi-dimensional tridiagonal system solvers on FPGAs. The libray is based on the inexpensive Thomas algorithm with batching of multiple systems for solving smaller and medium sized systems and hybrid Thomas_PCR and Thomas_Thomas algorithms to solve larger systems. The HLS Techniques used to implement the Libray and data path for 3D ADI applications can be found [here](https://github.com/Kamalavasan/Tridsolver-FPGA/blob/main/Docs/HLS_Techniques.md). The library currentry supports Xilinx and Intel FPGA devices and have been tested on Xilinx Alveo U280,  Alveo U50 cards and Intel PAC D5005. The library and performance results are currenty under review for publication. 
 
 #### Representative applications
-The library has been used to implement the 2D and 3D Heat diffusion application using FP32 and FP64 arithmetic. The implementation supports the batched computation of systems. The `/FPGA` directory consists the following varients of these applications. 
+The library has been used to implement the 2D and 3D Heat diffusion application using FP32 and FP64 arithmetic. The implementation supports the batched computation of systems. The `/FPGA/Xilinx` directory consists the following varients of these applications targetting Xilinx FPGAs. Library and applications are implemented using C++ for Vivado. 
 
 <table>
 <!--   <caption>2D ADI Heat Diffusion Application Performance, 120 iter</caption> -->
@@ -31,12 +31,14 @@ The library has been used to implement the 2D and 3D Heat diffusion application 
     <td>2D ADI application with Tiled Thomas-PCR solver using FP32 </td>
   </tr>
  </table>
+ 
+ `/FPGA/Intel` directory consits the batched thomas solver libray, Data path library and 2D ADI application using FP32 arithmetics targetting intel FPGAs. DPC++ is used to implement the library and application.   
 
 
 #### Application Implementations  
-Makefile based FPGA application implementation is supported. Optionally user can implement Application using Vitis GUI. In that case, user need to point the config file and set number of kernels. Here we note that separate config files are provided for U50 and U280 devices. 
+Makefile based FPGA application implementation is supported. Optionally user can implement Application using Vitis GUI to target Xilinx FPGAs. In that case, user need to point the config file and set number of kernels. Here we note that separate config files are provided for U50 and U280 devices. 
 
-Following are the steps for Makefile based flow, 
+Following are the steps for Makefile based flow for the Xilinx FPGAs, 
 
 `cd <application directory>`
 
@@ -51,6 +53,13 @@ please make sure XRT setup.sh and Vitis settings64.sh scripts are sourced before
 `source /disk1/Xilinx/Vitis/2019.2/settings64.sh`
 
 `source /opt/xilinx/xrt/setup.sh`
+
+Application to target intel FPGAs can be compiled using following make file command. Target board is set as Intel PAC D5005. 
+
+`make report/run_emu/hw`
+
+this requires Intel oneAPI toolkit as well as FPGA add on.   
+
 
 #### Performance comparison of Xilinx Accelaration Cards with Nvidia V100 GPU
 The performance of Tridsolver-FPGA library on Xilinx FPGAs has been compared to performance of the same applications on Nvida V100 GPUs (using the [Tridsolver GPU library by László et al.](https://github.com/OP-DSL/tridsolver) and NVIDIA's cuSPARSE). The following results are for the 2D and 3D Heat Diffusion Application implemented with the ADI technique and a Stochastic Local Volatility (SLV) model application, implemented with a Hundsdorfer-Verwer (HV) method for time integration. 
